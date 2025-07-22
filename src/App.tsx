@@ -23,7 +23,10 @@ export default function App() {
           linear-gradient(90deg, transparent 50%, rgba(255, 0, 0, 0.02) 50%),
           linear-gradient(0deg, transparent 50%, rgba(0, 255, 255, 0.02) 50%)
         `,
-        backgroundSize: '20px 20px'
+        backgroundSize: '20px 20px',
+        // Handle safe areas for iPhone notch/dynamic island
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)'
       }}
     >
       {/* Brutalist geometric background elements */}

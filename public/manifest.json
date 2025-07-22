@@ -3,9 +3,9 @@
   "short_name": "GodSim",
   "description": "GodSim - A world simulation game",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "theme_color": "#ffffff",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -24,5 +24,6 @@
   "categories": ["games", "entertainment"],
   "lang": "en",
   "scope": "/",
-  "id": "godsim-app"
+  "id": "godsim-app",
+  "prefer_related_applications": false
 }
