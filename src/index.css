@@ -40,6 +40,9 @@ html, body {
   /* Ensure the root element takes full height */
   min-height: 100vh;
   min-height: -webkit-fill-available;
+  /* Support for iPhone X+ safe areas - applied to the app container instead */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 body {
@@ -246,6 +249,18 @@ button {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* iOS fullscreen and safe area handling */
+@supports (padding: max(0px)) {
+  /* For iOS devices with safe areas (iPhone X and newer) */
+  .ios-safe-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  
+  .ios-safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
 }
 
 /* Ensure proper fullscreen behavior in PWA mode */
