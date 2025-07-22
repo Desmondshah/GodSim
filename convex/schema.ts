@@ -52,7 +52,15 @@ const applicationTables = {
     worldId: v.id("worlds"),
     turnNumber: v.number(),
     eventType: v.string(), // "divine_action", "world_event", "consequence"
-    narrative: v.string(),
+    narrative: v.union(
+      v.string(), // legacy format
+      v.object({
+        title: v.string(),
+        opening: v.string(),
+        consequences: v.string(),
+        simulationStatus: v.string(),
+      })
+    ),
     playerAction: v.optional(v.string()),
     choices: v.optional(v.array(v.object({
       id: v.string(),

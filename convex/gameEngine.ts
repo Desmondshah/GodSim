@@ -15,45 +15,117 @@ export const generateWorld = action({
 
     const { setupAnswers } = world;
     
-    const prompt = `You are creating an exciting fantasy world! Make it feel alive and interesting based on these choices:
+    // Define civilization stage based on world type
+    const getWorldStageContext = (worldType: string) => {
+      switch (worldType) {
+        case 'organic':
+          return {
+            stage: 'primitive hunter-gatherer',
+            description: 'small tribes just discovering fire and basic tools',
+            factionTypes: ['nomadic tribe', 'hunter clan', 'gatherer band', 'cave dwelling group'],
+            leadershipTypes: ['tribal elder', 'strongest hunter', 'wise shaman', 'clan matriarch'],
+            populationRange: [20, 100],
+            strengthRange: [30, 60],
+            locations: ['caves', 'river valleys', 'forest clearings', 'mountain passes'],
+            resources: ['wild fruits', 'fresh water', 'flint', 'animal hides', 'wood', 'clay'],
+            conflicts: ['territory disputes', 'hunting ground competition', 'water access', 'seasonal migration paths']
+          };
+        case 'sci-fi':
+          return {
+            stage: 'early space exploration or post-crash colonists',
+            description: 'survivors or pioneers struggling with basic technology',
+            factionTypes: ['crash survivors', 'research outpost', 'mining colony', 'exploration team'],
+            leadershipTypes: ['elected commander', 'chief scientist', 'senior engineer', 'council democracy'],
+            populationRange: [50, 500],
+            strengthRange: [40, 80],
+            locations: ['crashed ships', 'research stations', 'makeshift settlements', 'underground bunkers'],
+            resources: ['salvaged tech', 'energy cells', 'raw materials', 'food synthesizers', 'medical supplies'],
+            conflicts: ['resource scarcity', 'equipment failure', 'ideological differences', 'survival priorities']
+          };
+        case 'fantasy':
+          return {
+            stage: 'early magical awakening',
+            description: 'people just discovering magic exists in their world',
+            factionTypes: ['magic discoverers', 'traditional village', 'fearful isolationists', 'curious scholars'],
+            leadershipTypes: ['village elder', 'first mage', 'scared chieftain', 'wise woman'],
+            populationRange: [100, 800],
+            strengthRange: [35, 65],
+            locations: ['small villages', 'ancient ruins', 'mystical groves', 'stone circles'],
+            resources: ['magical herbs', 'ancient artifacts', 'crystal formations', 'enchanted springs'],
+            conflicts: ['fear of magic', 'old vs new ways', 'magical accidents', 'power awakening']
+          };
+        case 'medieval':
+          return {
+            stage: 'early feudal development',
+            description: 'small settlements forming the first bonds of loyalty and protection',
+            factionTypes: ['farming settlement', 'warrior band', 'craftsman guild', 'trading post'],
+            leadershipTypes: ['village headman', 'warrior captain', 'master craftsman', 'merchant leader'],
+            populationRange: [80, 600],
+            strengthRange: [40, 70],
+            locations: ['farming villages', 'hilltop forts', 'crossroads markets', 'riverside mills'],
+            resources: ['grain', 'iron ore', 'timber', 'stone', 'wool', 'pottery'],
+            conflicts: ['land ownership', 'trade disputes', 'protection agreements', 'crop failures']
+          };
+        default:
+          return {
+            stage: 'early tribal civilization',
+            description: 'simple groups forming the first communities',
+            factionTypes: ['tribal group', 'family clan', 'nomad band', 'settlement'],
+            leadershipTypes: ['tribal elder', 'family head', 'group leader', 'chosen speaker'],
+            populationRange: [30, 200],
+            strengthRange: [35, 60],
+            locations: ['natural shelters', 'river banks', 'hills', 'valleys'],
+            resources: ['water', 'food', 'basic materials', 'shelter materials'],
+            conflicts: ['basic survival', 'territory', 'resources', 'leadership']
+          };
+      }
+    };
+
+    const stageContext = getWorldStageContext(setupAnswers.worldType);
+    
+    const prompt = `You are creating the BEGINNING of civilization for a god simulation game! This is ${stageContext.stage} stage - ${stageContext.description}.
 
 World Type: ${setupAnswers.worldType}
 Your God: ${setupAnswers.supremeBeing.name} (${setupAnswers.supremeBeing.type}) - Purpose: ${setupAnswers.supremeBeing.purpose}
 World Rules: Time flows ${setupAnswers.creationRules.time}, Death is ${setupAnswers.creationRules.death}, Nature is ${setupAnswers.creationRules.nature}, Morality is ${setupAnswers.creationRules.morality}
 Who Lives Here: ${setupAnswers.inhabitants}
-How Fast Things Change: ${setupAnswers.simulationSpeed}
+Development Stage: ${stageContext.stage}
 
-Create a world that's easy to understand but full of interesting conflicts and opportunities! Make the factions have clear goals and personalities that will clash or cooperate in interesting ways.
+CRITICAL: This is the VERY BEGINNING of civilization. No kingdoms, no councils, no complex politics yet! Create:
+- Small, struggling groups (${stageContext.populationRange[0]}-${stageContext.populationRange[1]} people each)
+- Simple leadership (${stageContext.leadershipTypes.join(', ')})
+- Basic survival concerns (${stageContext.conflicts.join(', ')})
+- Primitive locations (${stageContext.locations.join(', ')})
 
 IMPORTANT: Return ONLY valid JSON, no extra text. Use this exact format:
 {
-  "worldName": "An exciting, memorable world name",
+  "worldName": "Simple, descriptive name for this early world",
   "regions": [
     {
-      "name": "Region name that hints at what makes it special",
-      "geography": "Vivid description of what this place looks and feels like",
-      "resources": ["resource1", "resource2", "resource3"]
+      "name": "Basic geographical area name",
+      "geography": "Simple terrain description focused on survival needs",
+      "resources": ["basic survival resources from: ${stageContext.resources.join(', ')}"]
     }
   ],
   "factions": [
     {
-      "name": "Faction name that shows their character",
-      "type": "what kind of group they are",
-      "alignment": "peaceful/aggressive/neutral/mysterious",
-      "beliefs": "What drives them and what they think about your god",
-      "leadership": "How they make decisions",
-      "strength": 75,
-      "population": 5000
+      "name": "Simple group name (not grand titles)",
+      "type": "one of: ${stageContext.factionTypes.join(', ')}",
+      "alignment": "peaceful/aggressive/neutral/cautious",
+      "beliefs": "Simple beliefs about survival, your god, and their world",
+      "leadership": "one of: ${stageContext.leadershipTypes.join(', ')}",
+      "strength": ${stageContext.strengthRange[0]}-${stageContext.strengthRange[1]},
+      "population": ${stageContext.populationRange[0]}-${stageContext.populationRange[1]}
     }
   ],
   "beliefSystems": [
-    "Clear belief about the god and world",
-    "An interesting myth or legend",
-    "A prophecy or expectation that could lead to conflict"
+    "Simple belief about the god and basic survival",
+    "Basic myth or legend about creation",
+    "Simple hope or fear about the future"
   ]
 }
 
-Create 3-5 diverse regions and 2-4 factions with different goals. Make sure the factions have reasons to interact, compete, or cooperate. RESPOND WITH ONLY THE JSON OBJECT.`;
+Create 2-4 regions and 2-3 small factions. Focus on basic survival, not politics! RESPOND WITH ONLY THE JSON OBJECT.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -190,7 +262,48 @@ export const generateTurnEvent = action({
       limit: 3,
     });
 
-    const contextPrompt = `You are the divine narrator of ${world.name}, a ${world.setupAnswers.worldType} world. Write like you're telling an exciting story to someone who loves fantasy adventures.
+    // Get stage context for events too
+    const getEventStageContext = (worldType: string, year: number) => {
+      const baseContext: Record<string, {
+        early: string;
+        activities: string;
+        discoveries: string;
+        conflicts: string;
+      }> = {
+        'organic': {
+          early: 'discovering fire, making first tools, finding shelter',
+          activities: 'hunting, gathering, cave painting, seasonal migrations',
+          discoveries: 'fire making, tool crafting, animal tracking, weather patterns',
+          conflicts: 'predator attacks, food scarcity, territory disputes, harsh weather'
+        },
+        'sci-fi': {
+          early: 'repairing basic equipment, establishing communications, surviving on alien world',
+          activities: 'salvaging technology, growing food, maintaining life support, exploring terrain',
+          discoveries: 'new technologies, alien life forms, resource deposits, communication signals',
+          conflicts: 'equipment failures, resource depletion, hostile environment, isolation'
+        },
+        'fantasy': {
+          early: 'learning magic exists, coping with magical phenomena, first spells',
+          activities: 'farming with magic, healing with herbs, reading omens, ritual ceremonies',
+          discoveries: 'magical abilities, ancient artifacts, mystical creatures, prophecies',
+          conflicts: 'magical accidents, fear of the unknown, power struggles, supernatural threats'
+        },
+        'medieval': {
+          early: 'forming first alliances, establishing trade, building defenses',
+          activities: 'farming, crafting weapons, building homes, training warriors',
+          discoveries: 'better farming methods, trade routes, metalworking, fortification techniques',
+          conflicts: 'bandits, crop diseases, trade disputes, succession questions'
+        }
+      };
+      
+      return baseContext[worldType] || baseContext['organic'];
+    };
+
+    const eventContext = getEventStageContext(world.setupAnswers.worldType, world.currentState.year);
+
+    const contextPrompt = `You are narrating the early days of civilization in ${world.name}, a ${world.setupAnswers.worldType} world. This is Year ${world.currentState.year} - still VERY early in development!
+
+REMEMBER: These are primitive people ${eventContext.early}. No complex politics, grand councils, or advanced technology yet!
 
 CURRENT SITUATION:
 - It's Year ${world.currentState.year} during ${world.currentState.season}
@@ -198,59 +311,88 @@ CURRENT SITUATION:
 - The balance of power: ${world.currentState.balanceOfPower}
 - Recent major events: ${world.currentState.majorEvents.join(", ")}
 
-THE PEOPLE OF YOUR WORLD:
-${world.factions.map((f: any) => `- The ${f.name}: ${f.beliefs} (${f.population.toLocaleString()} people, ${f.strength > 70 ? 'very strong' : f.strength > 40 ? 'moderately strong' : 'struggling'})`).join("\n")}
+THE SMALL GROUPS IN YOUR WORLD:
+${world.factions.map((f: any) => `- The ${f.name}: ${f.beliefs} (${f.population} people, ${f.strength > 60 ? 'doing well' : f.strength > 40 ? 'struggling' : 'barely surviving'})`).join("\n")}
+
+REGIONS IN YOUR WORLD:
+${world.regions.map((r: any) => `- ${r.name}: ${r.geography}`).join("\n")}
 
 WHAT HAPPENED RECENTLY:
 ${recentEvents.map((e: any) => `Turn ${e.turnNumber}: ${e.narrative}`).join("\n")}
 
 ${args.playerAction ? `YOUR LAST DIVINE ACTION: ${args.playerAction}` : "You have been watching silently from the heavens..."}
 
-Now write what happens next! Make it:
-- Easy to understand and exciting
-- Show clear cause and effect from actions
-- Include vivid details about what people see and feel
-- Have interesting conflicts or discoveries
-- Give the player meaningful choices that matter
+Now write what happens next! Focus on:
+- Basic survival: ${eventContext.activities}
+- Simple discoveries: ${eventContext.discoveries}  
+- Primitive conflicts: ${eventContext.conflicts}
+- How your small groups are trying to survive and grow
+
+Write like you're telling a story about people just beginning civilization. Use simple, vivid language about daily survival, not complex politics.
+
+CRITICAL: You are writing choices for GOD, not for humans! The player is the divine being watching from heaven.
+- WRONG: "Gather fish from the river" (that's human work)
+- RIGHT: "Command the fish to multiply in the river" (that's divine intervention)
+- WRONG: "Build fortifications" (humans build)  
+- RIGHT: "Send visions of defensive strategies" (gods send visions)
+- WRONG: "Explore the forest" (humans explore)
+- RIGHT: "Part the forest canopy to reveal hidden paths" (gods manipulate nature)
 
 IMPORTANT: Return ONLY valid JSON, no markdown. Use this exact format:
 {
-  "narrative": "Write 2-3 paragraphs that are engaging and easy to follow. Show what your people are doing, feeling, and discovering. Use simple, vivid language like you're telling a friend an exciting story. Include specific details about places, characters, and events that make the world feel alive.",
+  "narrative": "Write 2-3 paragraphs about simple people doing basic survival activities. Show what they're discovering, struggling with, or trying to achieve. Focus on daily life, not grand politics. Use names that fit the civilization stage - simple, descriptive names, not elaborate titles.",
   "choices": [
     {
       "id": "choice1",
-      "text": "A clear, specific divine action the player can take",
-      "icon": "⚡"
+      "text": "🔥 DIVINE ACTION: [GOD INTERVENES] in [REGION] (may [POSITIVE] or [NEGATIVE])",
+      "icon": "🔥"
     },
     {
       "id": "choice2", 
-      "text": "A different approach that leads to different outcomes",
+      "text": "🌊 DIVINE WILL: [GOD CAUSES/COMMANDS] for [FACTION] (could [BENEFIT] but risks [DANGER])",
       "icon": "🌊"
     },
     {
       "id": "choice3",
-      "text": "A third option that shows your divine power differently",
-      "icon": "🔥"
+      "text": "⚡ GODLY POWER: [GOD MANIFESTS] affecting [SITUATION] (might [HELP] or [BACKFIRE])",
+      "icon": "⚡"
     },
     {
       "id": "choice4",
-      "text": "Watch and wait to see what happens naturally",
+      "text": "👁️ Remain Silent and observe how your people adapt to their current challenges",
       "icon": "👁️"
     }
   ],
   "worldStateChanges": {
     "factionChanges": [
       {
-        "factionName": "Name of affected faction",
-        "changes": "Simple description of how they changed"
+        "factionName": "Name of affected group",
+        "changes": "Simple description of how their survival situation changed"
       }
     ],
-    "environmentChanges": "What changed in the world itself",
-    "newEvents": ["One or two new major events to remember"]
+    "environmentChanges": "Basic changes to the world that affect survival",
+    "newEvents": ["Simple events that primitive people would understand"]
   }
 }
 
-Make each choice lead to clearly different outcomes. Show how the world reacts to divine actions. RESPOND WITH ONLY THE JSON OBJECT.`;
+CRITICAL CHOICE FORMATTING RULES:
+- Write from GOD'S PERSPECTIVE: "Command the fish to swarm" NOT "Gather fish"
+- Use DIVINE ACTIONS: "Send lightning", "Cause earthquake", "Bless with visions", "Curse with plague"
+- Divine Action Examples:
+  * "Multiply the [resource] in [region]" 
+  * "Send [weather/disaster] to [location]"
+  * "Grant divine [knowledge/ability] to [faction]"
+  * "Cause the [terrain] to [change]"
+  * "Summon [creatures/phenomena] near [faction]"
+  * "Bless [faction] with [benefit]" 
+  * "Test [faction] with [challenge]"
+- Use actual region names from the world (${world.regions.map((r: any) => r.name).join(', ')})
+- Use actual faction names (${world.factions.map((f: any) => f.name).join(', ')})
+- Show both positive and negative consequences in parentheses
+- Make actions dramatic but appropriate for early civilization
+- Examples: "${eventContext.discoveries}" or "${eventContext.conflicts}"
+
+Make each choice appropriate for early civilization. No complex politics! RESPOND WITH ONLY THE JSON OBJECT.`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -314,22 +456,22 @@ ${world.factions[0]?.name || "Your followers"} have been especially devout latel
         choices: [
           {
             id: "choice1",
-            text: "Send a sign of your presence to reassure your followers",
-            icon: "⚡"
+            text: `🔥 Send Divine Lightning to ${world.regions[0]?.name || "the lands"} (may ignite sacred fires for warmth, or burn their shelters to ash)`,
+            icon: "🔥"
           },
           {
             id: "choice2", 
-            text: "Bless the land with abundant harvests",
-            icon: "🌾"
+            text: `🌊 Command the Waters to Rise for ${world.factions[0]?.name || "your people"} (could provide life-giving water, or flood their camps)`,
+            icon: "�"
           },
           {
             id: "choice3",
-            text: "Inspire a great leader to unite the people",
-            icon: "👑"
+            text: `⚡ Bestow Divine Visions upon their Leaders (might grant crucial knowledge, or drive them mad with cosmic truth)`,
+            icon: "⚡"
           },
           {
             id: "choice4",
-            text: "Watch and observe how events unfold naturally",
+            text: "👁️ Remain Silent and observe how your people adapt to their current challenges",
             icon: "👁️"
           }
         ],
