@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    
+    <!-- iOS-optimized viewport for native app feel -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- Make it behave like a native app when added to home screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="GodSim" />
+    
+    <!-- Hide Safari UI elements -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-touch-fullscreen" content="yes" />
+    
+    <!-- Prevent auto-detection of phone numbers and addresses -->
+    <meta name="format-detection" content="telephone=no, address=no" />
+    
+    <!-- iOS splash screen and home screen icon -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- iOS home screen icons -->
+    <link rel="apple-touch-icon" href="/icon-192.svg" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-192.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.svg" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icon-192.svg" />
+    
+    <!-- Prevent iOS from styling links as phone numbers -->
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <link rel="stylesheet" href="/src/index.css" />
+
+    <title>GodSim</title>
+
+    <meta property="og:image" content="/og-preview.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

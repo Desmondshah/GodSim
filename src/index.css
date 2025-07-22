@@ -1,0 +1,254 @@
+/* Import Google Fonts for brutalist typography */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-light: #ffffff;
+  --color-dark: #000000;
+  --brutal-red: #FF0000;
+  --brutal-yellow: #FFFF00;
+  --brutal-cyan: #00FFFF;
+  --brutal-gray: #808080;
+}
+
+/* Brutalist base styles */
+* {
+  box-sizing: border-box;
+}
+
+.accent-text {
+  @apply text-secondary font-mono uppercase tracking-wider;
+}
+
+/* iOS-specific native app styling with brutalist modifications */
+html, body {
+  /* Prevent rubber band scrolling on iOS */
+  overscroll-behavior: none;
+  /* Remove default margins and padding */
+  margin: 0;
+  padding: 0;
+  /* Ensure full height */
+  height: 100%;
+  /* Prevent horizontal scrolling */
+  overflow-x: hidden;
+  /* Support for iPhone X+ safe areas */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+#root {
+  /* Ensure the root element takes full height */
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+body {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+  color: var(--color-dark);
+  background: var(--color-light);
+  /* Disable text selection for a more native feel */
+  -webkit-user-select: none;
+  user-select: none;
+  /* Prevent tap highlight on iOS */
+  -webkit-tap-highlight-color: transparent;
+  /* Disable callouts on iOS */
+  -webkit-touch-callout: none;
+  /* Smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  /* Brutalist styling */
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+/* Allow text selection for input fields and text areas */
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Disable zoom on input focus (iOS) */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Remove iOS input styling */
+input, textarea, select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Remove iOS button styling */
+button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Brutalist auth input fields */
+.auth-input-field {
+  @apply w-full px-6 py-4 bg-neutral border-4 border-secondary font-mono font-bold text-brutal-base uppercase tracking-wider placeholder-secondary focus:border-primary focus:bg-accent transition-all duration-100 shadow-brutal;
+  outline: none !important;
+}
+
+.auth-input-field:focus {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #000000;
+}
+
+.auth-input-field::placeholder {
+  color: #808080;
+  font-weight: 700;
+}
+
+/* Brutalist auth buttons */
+.auth-button {
+  @apply w-full px-6 py-4 bg-primary border-4 border-secondary text-neutral font-mono font-bold text-brutal-base uppercase tracking-wider transition-all duration-100 shadow-brutal hover:bg-primary-dark active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed;
+  cursor: pointer;
+}
+
+.auth-button:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #000000;
+}
+
+/* Brutalist components */
+.brutal-card {
+  @apply bg-neutral border-4 border-secondary shadow-brutal p-4 sm:p-6;
+}
+
+.brutal-button {
+  @apply px-4 py-2 sm:px-6 sm:py-3 bg-accent border-4 border-secondary font-mono font-bold text-brutal-sm sm:text-brutal-base uppercase tracking-wider text-secondary transition-all duration-100 shadow-brutal hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal-lg active:translate-x-1 active:translate-y-1 active:shadow-none;
+  cursor: pointer;
+  min-height: 44px; /* Touch target minimum */
+}
+
+.brutal-button-primary {
+  @apply brutal-button bg-primary text-neutral;
+}
+
+.brutal-button-secondary {
+  @apply brutal-button bg-secondary text-neutral;
+}
+
+.brutal-button-danger {
+  @apply brutal-button bg-danger text-neutral;
+}
+
+.brutal-header {
+  @apply font-display font-black text-brutal-2xl sm:text-brutal-3xl uppercase tracking-tight text-secondary;
+  text-shadow: 3px 3px 0px #FF0000;
+}
+
+.brutal-subheader {
+  @apply font-mono font-bold text-brutal-lg sm:text-brutal-xl uppercase tracking-wide text-secondary;
+}
+
+.brutal-text {
+  @apply font-mono font-bold text-brutal-sm sm:text-brutal-base text-secondary leading-tight;
+}
+
+.brutal-container {
+  @apply bg-neutral border-4 border-secondary shadow-brutal-xl p-4 sm:p-6 lg:p-8;
+}
+
+.brutal-grid {
+  @apply grid gap-4 sm:gap-brutal-gap;
+}
+
+.brutal-input {
+  @apply px-4 py-3 bg-neutral border-4 border-secondary font-mono font-bold text-brutal-base uppercase tracking-wider placeholder-secondary focus:border-primary focus:bg-accent transition-all duration-100 shadow-brutal;
+  outline: none !important;
+}
+
+.brutal-input:focus {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #000000;
+}
+
+.brutal-select {
+  @apply brutal-input cursor-pointer;
+}
+
+.brutal-textarea {
+  @apply brutal-input min-h-24 resize-none;
+}
+
+/* Glitch effect for divine elements */
+.divine-glitch {
+  position: relative;
+  animation: glitch 3s infinite;
+}
+
+.divine-glitch::before,
+.divine-glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.divine-glitch::before {
+  color: #FF0000;
+  z-index: -1;
+  animation: glitch-1 0.3s infinite;
+}
+
+.divine-glitch::after {
+  color: #00FFFF;
+  z-index: -2;
+  animation: glitch-2 0.3s infinite;
+}
+
+@keyframes glitch-1 {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+}
+
+@keyframes glitch-2 {
+  0%, 100% { transform: translate(0); }
+  20% { transform: translate(2px, 2px); }
+  40% { transform: translate(2px, -2px); }
+  60% { transform: translate(-2px, 2px); }
+  80% { transform: translate(-2px, -2px); }
+}
+
+/* Scanning line effect */
+.scan-lines::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    transparent 50%, 
+    rgba(0, 255, 0, 0.03) 50%,
+    rgba(0, 255, 0, 0.03) 52%,
+    transparent 52%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+/* Brutalist loading animation */
+.brutal-loading {
+  @apply inline-block w-8 h-8 border-4 border-secondary border-t-primary;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
