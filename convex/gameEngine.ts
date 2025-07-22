@@ -8,6 +8,11 @@ export const generateWorld = action({
     worldId: v.id("worlds"),
   },
   handler: async (ctx, args): Promise<any> => {
+    // First check if API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY environment variable is not set. Please add it to your Convex dashboard.");
+    }
+
     const world = await ctx.runQuery(api.worldSetup.getUserWorld);
     if (!world || world._id !== args.worldId) {
       throw new Error("World not found");
@@ -127,61 +132,74 @@ IMPORTANT: Return ONLY valid JSON, no extra text. Use this exact format:
 
 Create 2-4 regions and 2-3 small factions. Focus on basic survival, not politics! RESPOND WITH ONLY THE JSON OBJECT.`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.CONVEX_OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.8,
-      }),
-    });
+    // Initialize worldData variable at function scope
+    let worldData: any;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error("Invalid response from OpenAI API");
-    }
-
-    let worldData;
     try {
-      let content = data.choices[0].message.content;
-      
-      // Extract JSON from markdown code blocks if present
-      const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-      if (jsonMatch) {
-        content = jsonMatch[1];
+      console.log("Making OpenAI API request...");
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.8,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("OpenAI API error:", response.status, errorText);
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       }
+
+      const data = await response.json();
+      console.log("OpenAI response received");
       
-      // Try to find JSON object in the content
-      const jsonStart = content.indexOf('{');
-      const jsonEnd = content.lastIndexOf('}');
-      
-      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-        content = content.substring(jsonStart, jsonEnd + 1);
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error("Invalid response from OpenAI API");
       }
-      
-      worldData = JSON.parse(content);
-      
-      // Validate required fields
-      if (!worldData.worldName || !worldData.regions || !worldData.factions) {
-        throw new Error("Missing required fields in generated world data");
+
+      try {
+        let content = data.choices[0].message.content;
+        console.log("Raw AI content:", content);
+        
+        // Extract JSON from markdown code blocks if present
+        const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+        if (jsonMatch) {
+          content = jsonMatch[1];
+        }
+        
+        // Try to find JSON object in the content
+        const jsonStart = content.indexOf('{');
+        const jsonEnd = content.lastIndexOf('}');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          content = content.substring(jsonStart, jsonEnd + 1);
+        }
+        
+        worldData = JSON.parse(content);
+        console.log("Parsed world data:", worldData);
+        
+        // Validate required fields
+        if (!worldData.worldName || !worldData.regions || !worldData.factions) {
+          throw new Error("Missing required fields in generated world data");
+        }
+        
+      } catch (parseError) {
+        console.error("JSON parsing error:", parseError);
+        console.error("Raw AI response:", data.choices[0].message.content);
+        throw parseError; // Re-throw to trigger fallback
       }
-      
-    } catch (parseError) {
-      console.error("Raw AI response:", data.choices[0].message.content);
-      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+
+    } catch (error) {
+      console.error("Error in world generation:", error instanceof Error ? error.message : String(error));
       
       // Fallback to a basic generated world
-      console.log("Using fallback world generation due to parsing error");
+      console.log("Using fallback world generation due to error:", error instanceof Error ? error.message : String(error));
       worldData = {
         worldName: `Realm of ${world.setupAnswers.supremeBeing.name}`,
         regions: [
@@ -229,6 +247,7 @@ Create 2-4 regions and 2-3 small factions. Focus on basic survival, not politics
       };
     }
 
+    console.log("Updating world with generated data...");
     await ctx.runMutation(api.worldSetup.updateWorldGeneration, {
       worldId: args.worldId,
       worldData: {
@@ -239,6 +258,7 @@ Create 2-4 regions and 2-3 small factions. Focus on basic survival, not politics
       },
     });
 
+    console.log("World generation completed successfully");
     return worldData;
   },
 });
@@ -249,6 +269,10 @@ export const generateTurnEvent = action({
     playerAction: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<any> => {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY environment variable is not set. Please add it to your Convex dashboard.");
+    }
+
     const world = await ctx.runQuery(api.gameEngine.getWorldForEvent, {
       worldId: args.worldId,
     });
@@ -394,110 +418,115 @@ CRITICAL CHOICE FORMATTING RULES:
 
 Make each choice appropriate for early civilization. No complex politics! RESPOND WITH ONLY THE JSON OBJECT.`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.CONVEX_OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: contextPrompt }],
-        temperature: 0.9,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error("Invalid response from OpenAI API");
-    }
-
-    let eventData;
     try {
-      let content = data.choices[0].message.content;
-      
-      // Extract JSON from markdown code blocks if present
-      const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-      if (jsonMatch) {
-        content = jsonMatch[1];
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [{ role: "user", content: contextPrompt }],
+          temperature: 0.9,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       }
+
+      const data = await response.json();
       
-      // Clean up control characters that might cause parsing issues
-      content = content.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
-      
-      // Try to find JSON object in the content
-      const jsonStart = content.indexOf('{');
-      const jsonEnd = content.lastIndexOf('}');
-      
-      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-        content = content.substring(jsonStart, jsonEnd + 1);
+      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        throw new Error("Invalid response from OpenAI API");
       }
-      
-      eventData = JSON.parse(content);
-      
-    } catch (parseError) {
-      console.error("Raw AI response:", data.choices[0].message.content);
-      const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
-      
-      // Fallback event data
-      console.log("Using fallback event generation due to parsing error");
-      eventData = {
-        narrative: `The heavens stir with divine energy as ${world.setupAnswers.supremeBeing.name} contemplates the realm below. 
+
+      let eventData;
+      try {
+        let content = data.choices[0].message.content;
+        
+        // Extract JSON from markdown code blocks if present
+        const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+        if (jsonMatch) {
+          content = jsonMatch[1];
+        }
+        
+        // Clean up control characters that might cause parsing issues
+        content = content.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+        
+        // Try to find JSON object in the content
+        const jsonStart = content.indexOf('{');
+        const jsonEnd = content.lastIndexOf('}');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          content = content.substring(jsonStart, jsonEnd + 1);
+        }
+        
+        eventData = JSON.parse(content);
+        
+      } catch (parseError) {
+        console.error("Raw AI response:", data.choices[0].message.content);
+        const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+        
+        // Fallback event data
+        console.log("Using fallback event generation due to parsing error");
+        eventData = {
+          narrative: `The heavens stir with divine energy as ${world.setupAnswers.supremeBeing.name} contemplates the realm below. 
 
 Your people go about their daily lives, unaware that their creator watches from above. In the ${world.regions[0]?.name || "central lands"}, merchants travel the dusty roads while farmers tend their fields. Children play in village squares as their elders speak in hushed tones about strange omens in the sky.
 
 ${world.factions[0]?.name || "Your followers"} have been especially devout lately, offering prayers and sacrifices at dawn. Meanwhile, tensions simmer between different groups as resources grow scarce and old rivalries resurface. The world awaits your divine guidance.`,
-        choices: [
-          {
-            id: "choice1",
-            text: `🔥 Send Divine Lightning to ${world.regions[0]?.name || "the lands"} (may ignite sacred fires for warmth, or burn their shelters to ash)`,
-            icon: "🔥"
-          },
-          {
-            id: "choice2", 
-            text: `🌊 Command the Waters to Rise for ${world.factions[0]?.name || "your people"} (could provide life-giving water, or flood their camps)`,
-            icon: "�"
-          },
-          {
-            id: "choice3",
-            text: `⚡ Bestow Divine Visions upon their Leaders (might grant crucial knowledge, or drive them mad with cosmic truth)`,
-            icon: "⚡"
-          },
-          {
-            id: "choice4",
-            text: "👁️ Remain Silent and observe how your people adapt to their current challenges",
-            icon: "👁️"
-          }
-        ],
-        worldStateChanges: {
-          factionChanges: [
+          choices: [
             {
-              factionName: world.factions[0]?.name || "The Faithful",
-              changes: "Growing more devout and seeking divine guidance"
+              id: "choice1",
+              text: `🔥 Send Divine Lightning to ${world.regions[0]?.name || "the lands"} (may ignite sacred fires for warmth, or burn their shelters to ash)`,
+              icon: "🔥"
+            },
+            {
+              id: "choice2", 
+              text: `🌊 Command the Waters to Rise for ${world.factions[0]?.name || "your people"} (could provide life-giving water, or flood their camps)`,
+              icon: "🌊"
+            },
+            {
+              id: "choice3",
+              text: `⚡ Bestow Divine Visions upon their Leaders (might grant crucial knowledge, or drive them mad with cosmic truth)`,
+              icon: "⚡"
+            },
+            {
+              id: "choice4",
+              text: "👁️ Remain Silent and observe how your people adapt to their current challenges",
+              icon: "👁️"
             }
           ],
-          environmentChanges: "The seasons change as usual, but there's tension in the air",
-          newEvents: ["Divine presence felt by mortals", "Increasing religious devotion"]
-        }
-      };
+          worldStateChanges: {
+            factionChanges: [
+              {
+                factionName: world.factions[0]?.name || "The Faithful",
+                changes: "Growing more devout and seeking divine guidance"
+              }
+            ],
+            environmentChanges: "The seasons change as usual, but there's tension in the air",
+            newEvents: ["Divine presence felt by mortals", "Increasing religious devotion"]
+          }
+        };
+      }
+
+      // Save the event
+      const newTurn = world.currentTurn + 1;
+      await ctx.runMutation(api.gameEngine.saveGameEvent, {
+        worldId: args.worldId,
+        turnNumber: newTurn,
+        eventData,
+        playerAction: args.playerAction,
+      });
+
+      return eventData;
+    } catch (error) {
+      console.error("Error generating turn event:", error instanceof Error ? error.message : String(error));
+      throw error;
     }
-
-    // Save the event
-    const newTurn = world.currentTurn + 1;
-    await ctx.runMutation(api.gameEngine.saveGameEvent, {
-      worldId: args.worldId,
-      turnNumber: newTurn,
-      eventData,
-      playerAction: args.playerAction,
-    });
-
-    return eventData;
   },
 });
 
@@ -659,6 +688,111 @@ export const makePlayerDecision = mutation({
       decision: args.decision,
       isCustomAction: args.isCustomAction,
       consequences: "", // Will be filled by next event generation
+    });
+
+    return true;
+  },
+});
+
+// Debug functions
+export const debugWorldState = query({
+  args: { worldId: v.id("worlds") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const world = await ctx.db.get(args.worldId);
+    if (!world || world.userId !== userId) return null;
+
+    return {
+      worldExists: !!world,
+      isSetupComplete: world.isSetupComplete,
+      hasRegions: world.regions?.length > 0,
+      hasFactions: world.factions?.length > 0,
+      currentTurn: world.currentTurn,
+      worldName: world.name,
+      setupAnswers: world.setupAnswers,
+    };
+  },
+});
+
+export const checkEnvironmentVariables = action({
+  args: {},
+  handler: async (ctx, args) => {
+    return {
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+      hasConvexOpenAIKey: !!process.env.CONVEX_OPENAI_API_KEY,
+      nodeEnv: process.env.NODE_ENV,
+    };
+  },
+});
+
+export const testOpenAIConnection = action({
+  args: {},
+  handler: async (ctx, args) => {
+    if (!process.env.OPENAI_API_KEY) {
+      return { error: "OPENAI_API_KEY not found" };
+    }
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/models", {
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return { error: `OpenAI API error: ${response.status} - ${errorText}` };
+      }
+
+      return { success: "OpenAI API connection successful" };
+    } catch (error) {
+      return { error: `Network error: ${error instanceof Error ? error.message : String(error)}` };
+    }
+  },
+});
+
+export const forceCompleteWorldSetup = mutation({
+  args: { worldId: v.id("worlds") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Must be authenticated");
+    }
+
+    const world = await ctx.db.get(args.worldId);
+    if (!world || world.userId !== userId) {
+      throw new Error("World not found or access denied");
+    }
+
+    // Force complete with minimal data if it's stuck
+    await ctx.db.patch(args.worldId, {
+      name: world.name || `Realm of ${world.setupAnswers.supremeBeing.name}`,
+      regions: world.regions.length > 0 ? world.regions : [
+        {
+          name: "The Starting Lands",
+          geography: "A simple realm where life begins",
+          resources: ["water", "food", "shelter materials"]
+        }
+      ],
+      factions: world.factions.length > 0 ? world.factions : [
+        {
+          name: "The First People",
+          type: "tribal group",
+          alignment: "neutral",
+          beliefs: `Simple folk who worship ${world.setupAnswers.supremeBeing.name}`,
+          leadership: "tribal elder",
+          strength: 50,
+          population: 100
+        }
+      ],
+      beliefSystems: world.beliefSystems.length > 0 ? world.beliefSystems : [
+        `${world.setupAnswers.supremeBeing.name} created this world`,
+        "Life is sacred and must be protected",
+        "The divine watches over all"
+      ],
+      isSetupComplete: true,
     });
 
     return true;
