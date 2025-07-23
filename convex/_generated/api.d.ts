@@ -13,7 +13,10 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as advancedGameEngine from "../advancedGameEngine.js";
 import type * as advancedSystemsTest from "../advancedSystemsTest.js";
+import type * as aiComponents from "../aiComponents.js";
+import type * as aiPoweredComponents from "../aiPoweredComponents.js";
 import type * as auth from "../auth.js";
 import type * as gameEngine from "../gameEngine.js";
 import type * as gameEngine_backup from "../gameEngine_backup.js";
@@ -21,6 +24,7 @@ import type * as gameEngine_new from "../gameEngine_new.js";
 import type * as http from "../http.js";
 import type * as router from "../router.js";
 import type * as test from "../test.js";
+import type * as ultraAdvancedEngine from "../ultraAdvancedEngine.js";
 import type * as worldSetup from "../worldSetup.js";
 
 /**
@@ -32,7 +36,10 @@ import type * as worldSetup from "../worldSetup.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  advancedGameEngine: typeof advancedGameEngine;
   advancedSystemsTest: typeof advancedSystemsTest;
+  aiComponents: typeof aiComponents;
+  aiPoweredComponents: typeof aiPoweredComponents;
   auth: typeof auth;
   gameEngine: typeof gameEngine;
   gameEngine_backup: typeof gameEngine_backup;
@@ -40,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   router: typeof router;
   test: typeof test;
+  ultraAdvancedEngine: typeof ultraAdvancedEngine;
   worldSetup: typeof worldSetup;
 }>;
 export declare const api: FilterApi<

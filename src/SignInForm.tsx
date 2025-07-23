@@ -7,6 +7,29 @@ export function SignInForm() {
   const { signIn } = useAuthActions();
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [submitting, setSubmitting] = useState(false);
+  const [anonymousLoading, setAnonymousLoading] = useState(false);
+
+  const handleAnonymousSignIn = async () => {
+    setAnonymousLoading(true);
+    
+    // Set a timeout to reset loading state if something goes wrong
+    const timeout = setTimeout(() => {
+      setAnonymousLoading(false);
+      toast.error("[ERROR] AUTHENTICATION_TIMEOUT // PLEASE_TRY_AGAIN");
+    }, 10000); // 10 second timeout
+
+    try {
+      await signIn("anonymous");
+      clearTimeout(timeout);
+      // Success - the auth state will change and trigger navigation
+      // Don't reset loading here, let the auth state change handle it
+    } catch (error) {
+      clearTimeout(timeout);
+      console.error("Anonymous sign-in failed:", error);
+      toast.error("[ERROR] ANONYMOUS_ACCESS_DENIED // TRY_AGAIN");
+      setAnonymousLoading(false);
+    }
+  };
 
   return (
     <div className="w-full brutal-container">
@@ -98,10 +121,17 @@ export function SignInForm() {
 
       <button 
         className="brutal-button-secondary w-full mt-6" 
-        onClick={() => void signIn("anonymous")}
-        disabled={submitting}
+        onClick={handleAnonymousSignIn}
+        disabled={submitting || anonymousLoading}
       >
-        ANONYMOUS_DEITY_MODE
+        {anonymousLoading ? (
+          <div className="flex items-center justify-center gap-2">
+            <div className="brutal-loading border-neutral border-t-secondary w-4 h-4"></div>
+            <span>ACCESSING_DIVINE_REALM...</span>
+          </div>
+        ) : (
+          "ANONYMOUS_DEITY_MODE"
+        )}
       </button>
       
       <div className="mt-6 p-4 bg-neutral border-l-8 border-accent">

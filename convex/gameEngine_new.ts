@@ -278,6 +278,7 @@ CRITICAL: Return ONLY valid JSON with the exact structure specified below:
       "alignment": "detailed_alignment_description",
       "beliefs": "Core beliefs and motivations",
       "leadership": "Leadership structure and key figures",
+      "strength": number (1 to 100),
       "home_region": "region_id",
       "population": {
         "total": number (${stageContext.populationRange[0]} to ${stageContext.populationRange[1]}),
@@ -644,6 +645,7 @@ export const generateAdvancedWorld = action({
             alignment: "pragmatic_traders",
             beliefs: `Followers of ${world.setupAnswers.supremeBeing.name} who believe in prosperity through trade`,
             leadership: "Council of Elected Representatives",
+            strength: 65,
             home_region: "central_heartlands",
             population: {
               total: 2500,
@@ -692,6 +694,7 @@ export const generateAdvancedWorld = action({
             alignment: "proud_isolationists",
             beliefs: `Honor the old ways while respecting ${world.setupAnswers.supremeBeing.name}'s strength`,
             leadership: "Clan Chieftains in Council",
+            strength: 70,
             home_region: "northern_highlands",
             population: {
               total: 1200,
@@ -763,28 +766,14 @@ export const generateAdvancedWorld = action({
       };
     }
 
-    // Sanitize population fields to match schema
-    function sanitizePopulation(pop: unknown): number | { total: number; demographics?: object } {
-      if (typeof pop === "number") return pop;
-      if (pop && typeof pop === "object" && typeof (pop as any).total === "number") {
-        return {
-          total: (pop as any).total,
-          ...((pop as any).demographics ? { demographics: (pop as any).demographics } : {})
-        };
-      }
-      return 0;
-    }
-    const sanitizedFactions = (worldData.factions || []).map((f: any) => ({
-      ...f,
-      population: sanitizePopulation(f.population)
-    }));
+    // Update world using direct mutation call
     await ctx.runMutation(api.gameEngine_new.updateAdvancedWorldGeneration, {
       worldId: args.worldId,
       worldData: {
         name: worldData.worldName,
         environment: worldData.environment,
         regions: worldData.regions,
-        factions: sanitizedFactions,
+        factions: worldData.factions,
         globalSystems: worldData.global_systems,
         technologyTree: TECHNOLOGY_TREES[setupAnswers.worldType] || TECHNOLOGY_TREES.organic,
       },

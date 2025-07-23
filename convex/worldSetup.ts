@@ -63,6 +63,8 @@ export const getUserWorld = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
+    console.log("getUserWorld query - userId:", userId);
+    
     if (!userId) {
       return null;
     }
@@ -72,6 +74,7 @@ export const getUserWorld = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
+    console.log("getUserWorld query - world:", world);
     return world;
   },
 });

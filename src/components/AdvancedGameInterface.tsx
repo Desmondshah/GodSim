@@ -17,7 +17,11 @@ export function AdvancedGameInterface({ worldId }: AdvancedGameInterfaceProps) {
   const world = useQuery(api.worldSetup.getUserWorld);
   const currentEvent = useQuery(api.gameEngine.getCurrentEvent, { worldId });
   const hasPlayerDecision = useQuery(api.gameEngine.hasPlayerDecisionForCurrentTurn, { worldId });
-  const analytics = useQuery(api.gameEngine.getCivilizationAnalytics, { worldId });
+  const analytics = useQuery(api.aiPoweredComponents.generateAnalyticsData, { 
+    worldId, 
+    timeRange: "7d", 
+    metrics: ["population", "happiness", "productivity", "stability"] 
+  });
   const generateTurnEvent = useAction(api.gameEngine.generateAdvancedTurnEvent);
   const makePlayerDecision = useMutation(api.gameEngine.makePlayerDecision);
 

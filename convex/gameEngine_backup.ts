@@ -1021,6 +1021,7 @@ export const generateAdvancedWorld = action({
             alignment: "pragmatic_traders",
             beliefs: `Followers of ${world.setupAnswers.supremeBeing.name} who believe in prosperity through trade`,
             leadership: "Council of Elected Representatives",
+            strength: 65,
             home_region: "central_heartlands",
             population: {
               total: 2500,
@@ -1069,6 +1070,7 @@ export const generateAdvancedWorld = action({
             alignment: "proud_isolationists",
             beliefs: `Honor the old ways while respecting ${world.setupAnswers.supremeBeing.name}'s strength`,
             leadership: "Clan Chieftains in Council",
+            strength: 70,
             home_region: "northern_highlands",
             population: {
               total: 1200,

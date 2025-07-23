@@ -183,7 +183,31 @@ export function GameInterface({ worldId }: GameInterfaceProps) {
           
           <div className="bg-neutral border-l-8 border-danger p-6 mb-6">
             <div className="brutal-text mb-4">
-              {currentEvent.narrative}
+              {typeof currentEvent.narrative === 'string' 
+                ? currentEvent.narrative 
+                : (
+                  <div className="space-y-4">
+                    {currentEvent.narrative.opening && (
+                      <div>{currentEvent.narrative.opening}</div>
+                    )}
+                    {currentEvent.narrative.current_situation && (
+                      <div className="mt-3 pt-3 border-t border-secondary/20">
+                        <strong>Current Situation:</strong> {currentEvent.narrative.current_situation}
+                      </div>
+                    )}
+                    {currentEvent.narrative.stakes && (
+                      <div className="mt-3 pt-3 border-t border-secondary/20">
+                        <strong>Stakes:</strong> {currentEvent.narrative.stakes}
+                      </div>
+                    )}
+                    {currentEvent.narrative.divine_perspective && (
+                      <div className="mt-3 pt-3 border-t border-secondary/20">
+                        <strong>Divine Perspective:</strong> {currentEvent.narrative.divine_perspective}
+                      </div>
+                    )}
+                  </div>
+                )
+              }
             </div>
             <div className="brutal-text text-sm text-secondary">
               &gt; EVENT_TYPE: {currentEvent.eventType.toUpperCase()}

@@ -3,16 +3,568 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { api, internal } from "./_generated/api";
 
-export const generateWorld = action({
+// Advanced game engine types and interfaces
+interface AdvancedFaction extends Record<string, any> {
+  id: string;
+  name: string;
+  type: string;
+  alignment: string;
+  beliefs: string;
+  leadership: string;
+  strength: number;
+  population: number;
+  economy: {
+    wealth: number;
+    tradeRoutes: string[];
+    resources: Record<string, number>;
+    productivity: number;
+  };
+  technology: {
+    level: number;
+    knownTechnologies: string[];
+    researchFocus: string;
+    innovationRate: number;
+  };
+  culture: {
+    values: string[];
+    traditions: string[];
+    adaptability: number;
+    influenceRadius: number;
+  };
+  military: {
+    armySize: number;
+    weaponTech: number;
+    defensiveStructures: number;
+    warExperience: number;
+  };
+  diplomacy: {
+    relations: Record<string, number>; // faction name -> relationship score (-100 to 100)
+    treaties: string[];
+    tradeAgreements: string[];
+    conflicts: string[];
+  };
+  stability: {
+    happiness: number;
+    loyalty: number;
+    internal_conflicts: string[];
+    succession_stability: number;
+  };
+}
+
+interface EnvironmentalSystem {
+  climate: {
+    temperature: number;
+    rainfall: number;
+    seasonality: number;
+    extremeEvents: string[];
+  };
+  resources: {
+    renewable: Record<string, number>;
+    nonRenewable: Record<string, number>;
+    discovery_rate: number;
+    depletion_rate: number;
+  };
+  ecology: {
+    biodiversity: number;
+    ecosystem_health: number;
+    carrying_capacity: number;
+    migration_patterns: string[];
+  };
+}
+
+interface TechnologyTree {
+  [category: string]: {
+    [tech: string]: {
+      prerequisites: string[];
+      effects: Record<string, number>;
+      description: string;
+      difficulty: number;
+    };
+  };
+}
+
+interface EventChain {
+  id: string;
+  name: string;
+  triggers: string[];
+  stages: {
+    description: string;
+    choices: Array<{
+      text: string;
+      consequences: Record<string, any>;
+      nextStage?: string;
+    }>;
+  }[];
+  currentStage: number;
+  participants: string[];
+}
+
+// Technology trees for different world types
+const TECHNOLOGY_TREES: Record<string, TechnologyTree> = {
+  organic: {
+    survival: {
+      "fire_mastery": {
+        prerequisites: [],
+        effects: { population_growth: 0.1, food_production: 0.15 },
+        description: "Mastering fire for cooking, warmth, and protection",
+        difficulty: 1
+      },
+      "tool_crafting": {
+        prerequisites: [],
+        effects: { productivity: 0.2, military_strength: 0.1 },
+        description: "Creating basic tools from stone and wood",
+        difficulty: 1
+      },
+      "hunting_techniques": {
+        prerequisites: ["tool_crafting"],
+        effects: { food_production: 0.25, military_strength: 0.15 },
+        description: "Advanced hunting strategies and techniques",
+        difficulty: 2
+      }
+    },
+    social: {
+      "tribal_organization": {
+        prerequisites: ["fire_mastery"],
+        effects: { stability: 0.2, population_growth: 0.1 },
+        description: "Organizing into stable tribal structures",
+        difficulty: 2
+      },
+      "oral_tradition": {
+        prerequisites: ["tribal_organization"],
+        effects: { culture_influence: 0.3, innovation_rate: 0.1 },
+        description: "Developing storytelling and knowledge preservation",
+        difficulty: 2
+      }
+    }
+  },
+  medieval: {
+    agriculture: {
+      "crop_rotation": {
+        prerequisites: [],
+        effects: { food_production: 0.3, population_growth: 0.2 },
+        description: "Systematic crop rotation for better yields",
+        difficulty: 2
+      },
+      "animal_husbandry": {
+        prerequisites: [],
+        effects: { food_production: 0.2, wealth: 0.1 },
+        description: "Domestication and breeding of livestock",
+        difficulty: 2
+      }
+    },
+    crafting: {
+      "metalworking": {
+        prerequisites: [],
+        effects: { military_strength: 0.3, productivity: 0.2 },
+        description: "Working with iron and other metals",
+        difficulty: 3
+      },
+      "construction": {
+        prerequisites: ["metalworking"],
+        effects: { defensive_strength: 0.4, stability: 0.2 },
+        description: "Building permanent stone structures",
+        difficulty: 3
+      }
+    }
+  },
+  fantasy: {
+    magic: {
+      "basic_spellcasting": {
+        prerequisites: [],
+        effects: { innovation_rate: 0.3, culture_influence: 0.2 },
+        description: "Learning to channel and control magical energy",
+        difficulty: 2
+      },
+      "enchantment": {
+        prerequisites: ["basic_spellcasting"],
+        effects: { productivity: 0.25, military_strength: 0.2 },
+        description: "Imbuing objects with magical properties",
+        difficulty: 3
+      },
+      "divination": {
+        prerequisites: ["basic_spellcasting"],
+        effects: { stability: 0.3, diplomacy_bonus: 0.2 },
+        description: "Seeing glimpses of future events",
+        difficulty: 3
+      }
+    }
+  },
+  "sci-fi": {
+    technology: {
+      "energy_systems": {
+        prerequisites: [],
+        effects: { productivity: 0.4, innovation_rate: 0.2 },
+        description: "Harnessing and storing energy efficiently",
+        difficulty: 3
+      },
+      "communication": {
+        prerequisites: [],
+        effects: { diplomacy_bonus: 0.3, culture_influence: 0.2 },
+        description: "Long-range communication systems",
+        difficulty: 2
+      },
+      "materials_science": {
+        prerequisites: ["energy_systems"],
+        effects: { defensive_strength: 0.3, productivity: 0.2 },
+        description: "Advanced materials and manufacturing",
+        difficulty: 4
+      }
+    }
+  }
+};
+
+// Advanced AI prompt generation system
+class AdvancedPromptEngine {
+  static generateWorldCreationPrompt(setupAnswers: any, stageContext: any): string {
+    return `You are an advanced AI world generator for a sophisticated god simulation game. Create a detailed, living world with complex systems and emergent behaviors.
+
+WORLD PARAMETERS:
+- Type: ${setupAnswers.worldType}
+- Divine Being: ${setupAnswers.supremeBeing.name} (${setupAnswers.supremeBeing.type})
+- Divine Purpose: ${setupAnswers.supremeBeing.purpose}
+- World Rules: Time flows ${setupAnswers.creationRules.time}, Death is ${setupAnswers.creationRules.death}, Nature is ${setupAnswers.creationRules.nature}, Morality is ${setupAnswers.creationRules.morality}
+- Inhabitants: ${setupAnswers.inhabitants}
+- Development Stage: ${stageContext.stage}
+
+ADVANCED REQUIREMENTS:
+1. Create factions with complex internal politics, economic systems, and cultural depth
+2. Establish trade networks, resource dependencies, and economic relationships
+3. Design technology progression paths appropriate to the world type
+4. Include environmental factors that affect civilization development
+5. Create potential for emergent diplomatic relationships and conflicts
+6. Establish cultural values and belief systems that drive faction behavior
+
+Generate a rich, interconnected world where every element affects every other element. Focus on systems that will create interesting emergent gameplay as the simulation progresses.
+
+CRITICAL: Return ONLY valid JSON with the exact structure specified below:
+
+{
+  "worldName": "Evocative name reflecting the world's essence and divine influence",
+  "environment": {
+    "climate": {
+      "baseTemperature": number (-20 to 40),
+      "seasonalVariation": number (0 to 30),
+      "rainfall": number (0 to 100),
+      "extremeWeatherFrequency": number (0 to 1)
+    },
+    "resources": {
+      "renewable": {"food": number, "timber": number, "stone": number},
+      "nonRenewable": {"metals": number, "gems": number, "fuel": number},
+      "magical": {"mana_crystals": number, "ley_lines": number} 
+    },
+    "ecology": {
+      "biodiversity": number (0 to 100),
+      "carrying_capacity": number (1000 to 50000),
+      "natural_hazards": ["disaster1", "disaster2"]
+    }
+  },
+  "regions": [
+    {
+      "id": "unique_region_id",
+      "name": "Region name",
+      "geography": "Detailed geographical description",
+      "climate_modifier": number (-0.5 to 0.5),
+      "resources": {"resource_type": abundance_number},
+      "strategic_value": number (1 to 10),
+      "natural_defenses": number (1 to 10),
+      "trade_accessibility": number (1 to 10)
+    }
+  ],
+  "factions": [
+    {
+      "id": "unique_faction_id",
+      "name": "Faction name",
+      "type": "government/organization type",
+      "alignment": "detailed_alignment_description",
+      "beliefs": "Core beliefs and motivations",
+      "leadership": "Leadership structure and key figures",
+      "home_region": "region_id",
+      "population": {
+        "total": number (${stageContext.populationRange[0]} to ${stageContext.populationRange[1]}),
+        "demographics": {"workers": 0.6, "warriors": 0.2, "nobles": 0.1, "clergy": 0.1}
+      },
+      "economy": {
+        "wealth": number (1 to 100),
+        "primary_industries": ["industry1", "industry2"],
+        "trade_routes": ["region_id1", "region_id2"],
+        "economic_focus": "trade/military/agriculture/technology/magic"
+      },
+      "military": {
+        "army_size": number (10 to 500),
+        "weapon_tech": number (1 to 10),
+        "fortifications": number (1 to 10),
+        "military_doctrine": "offensive/defensive/balanced"
+      },
+      "technology": {
+        "level": number (1 to 5),
+        "research_focus": "category from tech tree",
+        "known_technologies": ["tech1", "tech2"],
+        "innovation_rate": number (0.1 to 1.0)
+      },
+      "culture": {
+        "core_values": ["value1", "value2", "value3"],
+        "traditions": ["tradition1", "tradition2"],
+        "adaptability": number (0.1 to 1.0),
+        "cultural_influence": number (1 to 100)
+      },
+      "diplomacy": {
+        "default_stance": "aggressive/defensive/neutral/trading",
+        "key_relationships": {"faction_id": relationship_score},
+        "diplomatic_goals": ["goal1", "goal2"]
+      },
+      "stability": {
+        "internal_happiness": number (0 to 100),
+        "loyalty_to_leadership": number (0 to 100),
+        "succession_stability": number (0 to 100),
+        "potential_issues": ["issue1", "issue2"]
+      }
+    }
+  ],
+  "global_systems": {
+    "trade_networks": [
+      {
+        "name": "Trade route name",
+        "participants": ["faction_id1", "faction_id2"],
+        "goods": ["good1", "good2"],
+        "profitability": number (0.1 to 2.0),
+        "risks": ["risk1", "risk2"]
+      }
+    ],
+    "belief_systems": [
+      {
+        "name": "Belief system name",
+        "followers": ["faction_id1", "faction_id2"],
+        "core_tenets": ["tenet1", "tenet2"],
+        "influence_on_politics": number (0 to 1),
+        "potential_for_conflict": number (0 to 1)
+      }
+    ],
+    "power_dynamics": {
+      "dominant_faction": "faction_id or null",
+      "rising_powers": ["faction_id1"],
+      "declining_powers": ["faction_id2"],
+      "potential_alliances": [["faction_id1", "faction_id2"]]
+    }
+  }
+}
+
+Create 3-5 regions and 3-4 factions with intricate relationships and dependencies. Make it feel like a living, breathing world.`;
+  }
+
+  static generateEventPrompt(world: any, recentEvents: any[], playerAction?: string): string {
+    const factions = world.factions || [];
+    const regions = world.regions || [];
+    
+    return `You are the advanced AI narrator for a sophisticated god simulation. Generate complex, interconnected events that drive meaningful gameplay and create emergent storytelling.
+
+WORLD STATE ANALYSIS:
+World: ${world.name} (Year ${world.currentState?.year || 1}, ${world.currentState?.season || 'Spring'})
+Divine Being: ${world.setupAnswers?.supremeBeing?.name} (${world.setupAnswers?.supremeBeing?.type})
+Current Weather: ${world.currentState?.weather || 'Fair'}
+Power Balance: ${world.currentState?.balanceOfPower || 'Stable'}
+
+FACTION ANALYSIS:
+${factions.map((f: any) => `
+- ${f.name} (${f.type}): Pop ${f.population}, Strength ${f.strength}
+  Economy: ${f.economy ? `Wealth ${f.economy.wealth}, Focus: ${f.economy.economic_focus}` : 'Basic'}
+  Military: ${f.military ? `Army ${f.military.army_size}, Tech ${f.military.weapon_tech}` : 'Militia'}
+  Stability: ${f.stability ? `Happiness ${f.stability.internal_happiness}, Loyalty ${f.stability.loyalty_to_leadership}` : 'Stable'}
+  Current Issues: ${f.stability?.potential_issues?.join(', ') || 'None'}
+`).join('')}
+
+REGIONAL SITUATION:
+${regions.map((r: any) => `
+- ${r.name}: ${r.geography}
+  Strategic Value: ${r.strategic_value || 'Unknown'}, Defenses: ${r.natural_defenses || 'Unknown'}
+  Resources: ${Object.entries(r.resources || {}).map(([k, v]) => `${k}:${v}`).join(', ')}
+`).join('')}
+
+RECENT EVENTS CONTEXT:
+${recentEvents.map((e: any) => `Turn ${e.turnNumber}: ${e.narrative}`).join('\n')}
+
+${playerAction ? `\nDIVINE INTERVENTION: ${playerAction}` : '\nNo recent divine intervention - natural events are unfolding'}
+
+ADVANCED EVENT GENERATION REQUIREMENTS:
+1. Create multi-layered events with political, economic, social, and environmental implications
+2. Show realistic cause-and-effect relationships between faction actions
+3. Include subtle long-term consequences that may not be immediately apparent
+4. Generate events that create opportunities for interesting player choices
+5. Balance conflict with cooperation - not every event should be negative
+6. Consider technological progression, cultural evolution, and economic dynamics
+7. Make events feel consequential to the world's development
+
+DIVINE CHOICE DESIGN PRINCIPLES:
+- Choices should be morally complex with no clear "right" answer
+- Each choice should have both intended and unintended consequences
+- Include options for direct intervention, subtle influence, and non-interference
+- Consider how the divine being's personality and purpose would affect available options
+- Show trade-offs between short-term solutions and long-term stability
+
+Return ONLY valid JSON in this exact format:
+{
+  "event_analysis": {
+    "primary_drivers": ["factor1", "factor2"],
+    "affected_systems": ["economy", "military", "culture", "environment"],
+    "urgency_level": number (1-10),
+    "complexity_rating": number (1-10)
+  },
+  "narrative": {
+    "opening": "2-3 paragraphs setting the scene with rich, immersive detail",
+    "current_situation": "1-2 paragraphs describing the immediate crisis or opportunity", 
+    "stakes": "1 paragraph explaining what hangs in the balance",
+    "divine_perspective": "Brief reflection on how this appears to the divine observer"
+  },
+  "choices": [
+    {
+      "id": "choice1",
+      "text": "🔥 [Divine Action Type]: Specific intervention description (intended benefit, potential risk)",
+      "icon": "🔥",
+      "divine_cost": number (1-10),
+      "immediate_effects": ["effect1", "effect2"],
+      "long_term_consequences": ["consequence1", "consequence2"],
+      "affected_factions": ["faction_id1", "faction_id2"]
+    }
+  ],
+  "world_state_changes": {
+    "environmental_shifts": {
+      "climate_effects": {"temperature": change, "rainfall": change},
+      "resource_changes": {"resource_type": change_amount},
+      "ecological_impact": number (-1 to 1)
+    },
+    "faction_developments": [
+      {
+        "faction_id": "faction_id",
+        "population_change": number,
+        "wealth_change": number,
+        "stability_change": number,
+        "military_change": number,
+        "technology_progress": {"category": "tech_name"},
+        "cultural_evolution": ["new_trait1", "new_trait2"],
+        "new_relationships": {"other_faction_id": relationship_change},
+        "strategic_changes": "description of new goals or priorities"
+      }
+    ],
+    "regional_changes": [
+      {
+        "region_id": "region_id", 
+        "infrastructure_development": number (-10 to 10),
+        "resource_discovery": {"resource": amount},
+        "strategic_importance_change": number (-5 to 5)
+      }
+    ],
+    "global_events": [
+      {
+        "event_type": "technological/cultural/economic/political/environmental",
+        "description": "Brief description of world-spanning change",
+        "timeline": "immediate/short_term/long_term"
+      }
+    ],
+    "emerging_trends": [
+      {
+        "trend_name": "Name of emerging pattern",
+        "description": "What is changing across the world",
+        "potential_outcomes": ["outcome1", "outcome2"],
+        "time_to_impact": number (1-20 turns)
+      }
+    ]
+  }
+}
+
+Create an event that feels like it belongs in an advanced civilization simulation with deep, interconnected systems.`;
+  }
+}
+
+// Internal handler functions
+async function updateAdvancedWorldGenerationHandler(ctx: any, args: { worldId: any, worldData: any }) {
+  await ctx.db.patch(args.worldId, {
+    name: args.worldData.name,
+    regions: args.worldData.regions,
+    factions: args.worldData.factions,
+    environment: args.worldData.environment,
+    globalSystems: args.worldData.globalSystems,
+    technologyTree: args.worldData.technologyTree,
+    isSetupComplete: true,
+  });
+}
+
+async function saveAdvancedGameEventHandler(ctx: any, args: { worldId: any, turnNumber: number, eventData: any, playerAction?: string }) {
+  // Save the advanced event
+  await ctx.db.insert("gameEvents", {
+    worldId: args.worldId,
+    turnNumber: args.turnNumber,
+    eventType: "advanced_simulation",
+    narrative: args.eventData.narrative || args.eventData.narrative?.opening || "Advanced event occurred",
+    playerAction: args.playerAction,
+    choices: args.eventData.choices,
+    worldStateChanges: args.eventData.world_state_changes || {},
+    eventAnalysis: args.eventData.event_analysis,
+  });
+
+  // Update world state with sophisticated changes
+  const world = await ctx.db.get(args.worldId);
+  if (!world) return;
+
+  // Apply advanced faction changes
+  const updatedFactions = world.factions?.map((faction: any) => {
+    const factionChanges = args.eventData.world_state_changes?.faction_developments?.find(
+      (change: any) => change.faction_id === faction.id
+    );
+    
+    if (factionChanges) {
+      return {
+        ...faction,
+        population: Math.max(0, (faction.population || faction.population?.total || 0) + (factionChanges.population_change || 0)),
+        strength: Math.max(0, Math.min(100, faction.strength + (factionChanges.military_change || 0))),
+        economy: {
+          ...faction.economy,
+          wealth: Math.max(0, Math.min(100, (faction.economy?.wealth || 50) + (factionChanges.wealth_change || 0)))
+        },
+        stability: {
+          ...faction.stability,
+          internal_happiness: Math.max(0, Math.min(100, (faction.stability?.internal_happiness || 50) + (factionChanges.stability_change || 0)))
+        }
+      };
+    }
+    return faction;
+  }) || world.factions;
+
+  // Apply environmental changes
+  const environmentChanges = args.eventData.world_state_changes?.environmental_shifts;
+  const updatedEnvironment = world.environment ? {
+    ...world.environment,
+    climate: {
+      ...world.environment.climate,
+      baseTemperature: (world.environment.climate?.baseTemperature || 15) + (environmentChanges?.climate_effects?.temperature || 0),
+      rainfall: Math.max(0, Math.min(100, (world.environment.climate?.rainfall || 60) + (environmentChanges?.climate_effects?.rainfall || 0)))
+    }
+  } : world.environment;
+
+  // Update emerging trends
+  const emergingTrends = args.eventData.world_state_changes?.emerging_trends || [];
+  
+  const newMajorEvents = [
+    ...(world.currentState?.majorEvents || []),
+    ...emergingTrends.map((trend: any) => trend.trend_name)
+  ].slice(-5);
+
+  await ctx.db.patch(args.worldId, {
+    currentTurn: args.turnNumber,
+    factions: updatedFactions,
+    environment: updatedEnvironment,
+    currentState: {
+      ...world.currentState,
+      year: (world.currentState?.year || 1) + (args.turnNumber % 4 === 0 ? 1 : 0),
+      majorEvents: newMajorEvents,
+      emergingTrends: emergingTrends,
+    },
+  });
+}
+
+export const generateAdvancedWorld = action({
   args: {
     worldId: v.id("worlds"),
   },
   handler: async (ctx, args): Promise<any> => {
-    // First check if API key is available
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY environment variable is not set. Please add it to your Convex dashboard.");
-    }
-
     const world = await ctx.runQuery(api.worldSetup.getUserWorld);
     if (!world || world._id !== args.worldId) {
       throw new Error("World not found");
@@ -20,259 +572,308 @@ export const generateWorld = action({
 
     const { setupAnswers } = world;
     
-    // Define civilization stage based on world type
-    const getWorldStageContext = (worldType: string) => {
-      switch (worldType) {
-        case 'organic':
-          return {
-            stage: 'primitive hunter-gatherer',
-            description: 'small tribes just discovering fire and basic tools',
-            factionTypes: ['nomadic tribe', 'hunter clan', 'gatherer band', 'cave dwelling group'],
-            leadershipTypes: ['tribal elder', 'strongest hunter', 'wise shaman', 'clan matriarch'],
-            populationRange: [20, 100],
-            strengthRange: [30, 60],
-            locations: ['caves', 'river valleys', 'forest clearings', 'mountain passes'],
-            resources: ['wild fruits', 'fresh water', 'flint', 'animal hides', 'wood', 'clay'],
-            conflicts: ['territory disputes', 'hunting ground competition', 'water access', 'seasonal migration paths']
-          };
-        case 'sci-fi':
-          return {
-            stage: 'early space exploration or post-crash colonists',
-            description: 'survivors or pioneers struggling with basic technology',
-            factionTypes: ['crash survivors', 'research outpost', 'mining colony', 'exploration team'],
-            leadershipTypes: ['elected commander', 'chief scientist', 'senior engineer', 'council democracy'],
-            populationRange: [50, 500],
-            strengthRange: [40, 80],
-            locations: ['crashed ships', 'research stations', 'makeshift settlements', 'underground bunkers'],
-            resources: ['salvaged tech', 'energy cells', 'raw materials', 'food synthesizers', 'medical supplies'],
-            conflicts: ['resource scarcity', 'equipment failure', 'ideological differences', 'survival priorities']
-          };
-        case 'fantasy':
-          return {
-            stage: 'early magical awakening',
-            description: 'people just discovering magic exists in their world',
-            factionTypes: ['magic discoverers', 'traditional village', 'fearful isolationists', 'curious scholars'],
-            leadershipTypes: ['village elder', 'first mage', 'scared chieftain', 'wise woman'],
-            populationRange: [100, 800],
-            strengthRange: [35, 65],
-            locations: ['small villages', 'ancient ruins', 'mystical groves', 'stone circles'],
-            resources: ['magical herbs', 'ancient artifacts', 'crystal formations', 'enchanted springs'],
-            conflicts: ['fear of magic', 'old vs new ways', 'magical accidents', 'power awakening']
-          };
-        case 'medieval':
-          return {
-            stage: 'early feudal development',
-            description: 'small settlements forming the first bonds of loyalty and protection',
-            factionTypes: ['farming settlement', 'warrior band', 'craftsman guild', 'trading post'],
-            leadershipTypes: ['village headman', 'warrior captain', 'master craftsman', 'merchant leader'],
-            populationRange: [80, 600],
-            strengthRange: [40, 70],
-            locations: ['farming villages', 'hilltop forts', 'crossroads markets', 'riverside mills'],
-            resources: ['grain', 'iron ore', 'timber', 'stone', 'wool', 'pottery'],
-            conflicts: ['land ownership', 'trade disputes', 'protection agreements', 'crop failures']
-          };
-        default:
-          return {
-            stage: 'early tribal civilization',
-            description: 'simple groups forming the first communities',
-            factionTypes: ['tribal group', 'family clan', 'nomad band', 'settlement'],
-            leadershipTypes: ['tribal elder', 'family head', 'group leader', 'chosen speaker'],
-            populationRange: [30, 200],
-            strengthRange: [35, 60],
-            locations: ['natural shelters', 'river banks', 'hills', 'valleys'],
-            resources: ['water', 'food', 'basic materials', 'shelter materials'],
-            conflicts: ['basic survival', 'territory', 'resources', 'leadership']
-          };
-      }
+    // Define advanced civilization stage based on world type
+    const getAdvancedStageContext = (worldType: string) => {
+      const contexts: Record<string, any> = {
+        'organic': {
+          stage: 'early tribal confederations',
+          description: 'multiple tribes forming alliances and trade relationships',
+          populationRange: [100, 1000],
+          complexityLevel: 'medium',
+          keyTechnologies: ['fire_mastery', 'tool_crafting', 'tribal_organization'],
+          emergingChallenges: ['resource competition', 'territorial expansion', 'leadership succession']
+        },
+        'sci-fi': {
+          stage: 'colonial settlements with advanced tech',
+          description: 'established colonies leveraging salvaged and adapted technology',
+          populationRange: [200, 2000],
+          complexityLevel: 'high',
+          keyTechnologies: ['energy_systems', 'communication', 'materials_science'],
+          emergingChallenges: ['resource depletion', 'technological breakdown', 'isolation syndrome']
+        },
+        'fantasy': {
+          stage: 'magical awakening societies',
+          description: 'civilizations integrating magic into daily life and governance',
+          populationRange: [300, 1500],
+          complexityLevel: 'high',
+          keyTechnologies: ['basic_spellcasting', 'enchantment', 'divination'],
+          emergingChallenges: ['magical instability', 'power imbalances', 'arcane conflicts']
+        },
+        'medieval': {
+          stage: 'feudal kingdoms emerging',
+          description: 'consolidated territories with complex hierarchies and trade networks',
+          populationRange: [500, 3000],
+          complexityLevel: 'medium',
+          keyTechnologies: ['metalworking', 'construction', 'crop_rotation'],
+          emergingChallenges: ['succession crises', 'peasant unrest', 'noble conflicts']
+        }
+      };
+      
+      return contexts[worldType] || contexts['organic'];
     };
 
-    const stageContext = getWorldStageContext(setupAnswers.worldType);
+    const stageContext = getAdvancedStageContext(setupAnswers.worldType);
+    const prompt = AdvancedPromptEngine.generateWorldCreationPrompt(setupAnswers, stageContext);
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.CONVEX_OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 4000,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
     
-    const prompt = `You are creating the BEGINNING of civilization for a god simulation game! This is ${stageContext.stage} stage - ${stageContext.description}.
-
-World Type: ${setupAnswers.worldType}
-Your God: ${setupAnswers.supremeBeing.name} (${setupAnswers.supremeBeing.type}) - Purpose: ${setupAnswers.supremeBeing.purpose}
-World Rules: Time flows ${setupAnswers.creationRules.time}, Death is ${setupAnswers.creationRules.death}, Nature is ${setupAnswers.creationRules.nature}, Morality is ${setupAnswers.creationRules.morality}
-Who Lives Here: ${setupAnswers.inhabitants}
-Development Stage: ${stageContext.stage}
-
-CRITICAL: This is the VERY BEGINNING of civilization. No kingdoms, no councils, no complex politics yet! Create:
-- Small, struggling groups (${stageContext.populationRange[0]}-${stageContext.populationRange[1]} people each)
-- Simple leadership (${stageContext.leadershipTypes.join(', ')})
-- Basic survival concerns (${stageContext.conflicts.join(', ')})
-- Primitive locations (${stageContext.locations.join(', ')})
-
-IMPORTANT: Return ONLY valid JSON, no extra text. Use this exact format:
-{
-  "worldName": "Simple, descriptive name for this early world",
-  "regions": [
-    {
-      "name": "Basic geographical area name",
-      "geography": "Simple terrain description focused on survival needs",
-      "resources": ["basic survival resources from: ${stageContext.resources.join(', ')}"]
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("Invalid response from OpenAI API");
     }
-  ],
-  "factions": [
-    {
-      "name": "Simple group name (not grand titles)",
-      "type": "one of: ${stageContext.factionTypes.join(', ')}",
-      "alignment": "peaceful/aggressive/neutral/cautious",
-      "beliefs": "Simple beliefs about survival, your god, and their world",
-      "leadership": "one of: ${stageContext.leadershipTypes.join(', ')}",
-      "strength": ${stageContext.strengthRange[0]}-${stageContext.strengthRange[1]},
-      "population": ${stageContext.populationRange[0]}-${stageContext.populationRange[1]}
-    }
-  ],
-  "beliefSystems": [
-    "Simple belief about the god and basic survival",
-    "Basic myth or legend about creation",
-    "Simple hope or fear about the future"
-  ]
-}
 
-Create 2-4 regions and 2-3 small factions. Focus on basic survival, not politics! RESPOND WITH ONLY THE JSON OBJECT.`;
-
-    // Initialize worldData variable at function scope
-    let worldData: any;
-
+    let worldData;
     try {
-      console.log("Making OpenAI API request...");
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.8,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("OpenAI API error:", response.status, errorText);
-        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log("OpenAI response received");
+      let content = data.choices[0].message.content;
       
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error("Invalid response from OpenAI API");
+      // Extract JSON from markdown code blocks if present
+      const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+      if (jsonMatch) {
+        content = jsonMatch[1];
       }
-
-      try {
-        let content = data.choices[0].message.content;
-        console.log("Raw AI content:", content);
-        
-        // Extract JSON from markdown code blocks if present
-        const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-        if (jsonMatch) {
-          content = jsonMatch[1];
-        }
-        
-        // Try to find JSON object in the content
-        const jsonStart = content.indexOf('{');
-        const jsonEnd = content.lastIndexOf('}');
-        
-        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-          content = content.substring(jsonStart, jsonEnd + 1);
-        }
-        
-        worldData = JSON.parse(content);
-        console.log("Parsed world data:", worldData);
-        
-        // Validate required fields
-        if (!worldData.worldName || !worldData.regions || !worldData.factions) {
-          throw new Error("Missing required fields in generated world data");
-        }
-        
-      } catch (parseError) {
-        console.error("JSON parsing error:", parseError);
-        console.error("Raw AI response:", data.choices[0].message.content);
-        throw parseError; // Re-throw to trigger fallback
-      }
-
-    } catch (error) {
-      console.error("Error in world generation:", error instanceof Error ? error.message : String(error));
       
-      // Fallback to a basic generated world
-      console.log("Using fallback world generation due to error:", error instanceof Error ? error.message : String(error));
+      // Try to find JSON object in the content
+      const jsonStart = content.indexOf('{');
+      const jsonEnd = content.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        content = content.substring(jsonStart, jsonEnd + 1);
+      }
+      
+      worldData = JSON.parse(content);
+      
+      // Validate required fields
+      if (!worldData.worldName || !worldData.regions || !worldData.factions || !worldData.environment) {
+        throw new Error("Missing required fields in generated world data");
+      }
+      
+    } catch (parseError) {
+      console.error("Raw AI response:", data.choices[0].message.content);
+      console.log("Using enhanced fallback world generation");
+      
+      // Enhanced fallback world with complex systems
       worldData = {
-        worldName: `Realm of ${world.setupAnswers.supremeBeing.name}`,
+        worldName: `${world.setupAnswers.supremeBeing.name}'s Realm`,
+        environment: {
+          climate: {
+            baseTemperature: 15,
+            seasonalVariation: 20,
+            rainfall: 60,
+            extremeWeatherFrequency: 0.2
+          },
+          resources: {
+            renewable: { food: 80, timber: 70, stone: 60 },
+            nonRenewable: { metals: 40, gems: 20, fuel: 30 },
+            magical: { mana_crystals: 25, ley_lines: 5 }
+          },
+          ecology: {
+            biodiversity: 75,
+            carrying_capacity: 15000,
+            natural_hazards: ["storms", "droughts", "earthquakes"]
+          }
+        },
         regions: [
           {
-            name: "The Central Lands",
-            geography: "Rolling hills and fertile valleys with moderate climate",
-            resources: ["grain", "stone", "timber"]
+            id: "central_heartlands",
+            name: "The Central Heartlands",
+            geography: "Fertile plains crossed by rivers, ideal for agriculture and trade",
+            climate_modifier: 0.1,
+            resources: { food: 90, stone: 50, metals: 30 },
+            strategic_value: 8,
+            natural_defenses: 4,
+            trade_accessibility: 9
           },
           {
-            name: "The Borderlands",
-            geography: "Rugged terrain at the edge of civilization",
-            resources: ["iron", "wild game", "medicinal herbs"]
+            id: "northern_highlands",
+            name: "Northern Highlands",
+            geography: "Mountainous terrain rich in minerals but harsh climate",
+            climate_modifier: -0.3,
+            resources: { metals: 80, gems: 60, stone: 90 },
+            strategic_value: 6,
+            natural_defenses: 9,
+            trade_accessibility: 4
           },
           {
-            name: "The Sacred Grove",
-            geography: "Ancient forest with mystical properties",
-            resources: ["rare woods", "magical essence", "fresh water"]
+            id: "eastern_forests",
+            name: "Eastern Woodlands",
+            geography: "Dense forests teeming with wildlife and mystical energy",
+            climate_modifier: 0.0,
+            resources: { timber: 95, food: 60, mana_crystals: 40 },
+            strategic_value: 5,
+            natural_defenses: 7,
+            trade_accessibility: 6
           }
         ],
         factions: [
           {
-            name: "The Faithful",
-            type: "religious order",
-            alignment: "peaceful",
-            beliefs: `Devoted followers of ${world.setupAnswers.supremeBeing.name}`,
-            leadership: "Council of Elders",
-            strength: 60,
-            population: 3000
+            id: "heartland_republic",
+            name: "Heartland Republic",
+            type: "elected_council",
+            alignment: "pragmatic_traders",
+            beliefs: `Followers of ${world.setupAnswers.supremeBeing.name} who believe in prosperity through trade`,
+            leadership: "Council of Elected Representatives",
+            strength: 65,
+            home_region: "central_heartlands",
+            population: {
+              total: 2500,
+              demographics: { workers: 0.5, warriors: 0.2, nobles: 0.2, clergy: 0.1 }
+            },
+            economy: {
+              wealth: 75,
+              primary_industries: ["agriculture", "trade", "crafting"],
+              trade_routes: ["northern_highlands", "eastern_forests"],
+              economic_focus: "trade"
+            },
+            military: {
+              army_size: 300,
+              weapon_tech: 6,
+              fortifications: 5,
+              military_doctrine: "defensive"
+            },
+            technology: {
+              level: 3,
+              research_focus: "agriculture",
+              known_technologies: ["crop_rotation", "metalworking"],
+              innovation_rate: 0.6
+            },
+            culture: {
+              core_values: ["prosperity", "cooperation", "innovation"],
+              traditions: ["harvest_festivals", "trade_fairs"],
+              adaptability: 0.8,
+              cultural_influence: 60
+            },
+            diplomacy: {
+              default_stance: "trading",
+              key_relationships: {},
+              diplomatic_goals: ["expand_trade", "maintain_peace"]
+            },
+            stability: {
+              internal_happiness: 70,
+              loyalty_to_leadership: 65,
+              succession_stability: 80,
+              potential_issues: ["wealth_inequality", "trade_disputes"]
+            }
           },
           {
-            name: "The Free Folk",
-            type: "independent settlements",
-            alignment: "neutral",
-            beliefs: "Believe in self-determination and freedom",
-            leadership: "Elected representatives",
-            strength: 45,
-            population: 2000
+            id: "mountain_clans",
+            name: "Highland Clans",
+            type: "tribal_confederation",
+            alignment: "proud_isolationists",
+            beliefs: `Honor the old ways while respecting ${world.setupAnswers.supremeBeing.name}'s strength`,
+            leadership: "Clan Chieftains in Council",
+            strength: 70,
+            home_region: "northern_highlands",
+            population: {
+              total: 1200,
+              demographics: { workers: 0.4, warriors: 0.4, nobles: 0.1, clergy: 0.1 }
+            },
+            economy: {
+              wealth: 45,
+              primary_industries: ["mining", "metalworking", "herding"],
+              trade_routes: ["central_heartlands"],
+              economic_focus: "military"
+            },
+            military: {
+              army_size: 400,
+              weapon_tech: 8,
+              fortifications: 8,
+              military_doctrine: "offensive"
+            },
+            technology: {
+              level: 2,
+              research_focus: "crafting",
+              known_technologies: ["metalworking", "construction"],
+              innovation_rate: 0.4
+            },
+            culture: {
+              core_values: ["honor", "tradition", "strength"],
+              traditions: ["warrior_trials", "ancestor_worship"],
+              adaptability: 0.3,
+              cultural_influence: 40
+            },
+            diplomacy: {
+              default_stance: "defensive",
+              key_relationships: {},
+              diplomatic_goals: ["maintain_independence", "honor_ancestors"]
+            },
+            stability: {
+              internal_happiness: 60,
+              loyalty_to_leadership: 85,
+              succession_stability: 40,
+              potential_issues: ["clan_rivalries", "resource_scarcity"]
+            }
           }
         ],
-        beliefSystems: [
-          `${world.setupAnswers.supremeBeing.name} is the creator and guide of all life`,
-          "The world exists in a delicate balance that must be maintained",
-          "Great changes are foretold to come with divine intervention"
-        ]
+        global_systems: {
+          trade_networks: [
+            {
+              name: "Central Trade Route",
+              participants: ["heartland_republic", "mountain_clans"],
+              goods: ["food", "metals", "crafted_goods"],
+              profitability: 1.2,
+              risks: ["bandits", "weather_delays"]
+            }
+          ],
+          belief_systems: [
+            {
+              name: `Faith of ${world.setupAnswers.supremeBeing.name}`,
+              followers: ["heartland_republic", "mountain_clans"],
+              core_tenets: ["divine_guidance", "mortal_responsibility"],
+              influence_on_politics: 0.6,
+              potential_for_conflict: 0.3
+            }
+          ],
+          power_dynamics: {
+            dominant_faction: "heartland_republic",
+            rising_powers: ["heartland_republic"],
+            declining_powers: [],
+            potential_alliances: [["heartland_republic", "mountain_clans"]]
+          }
+        }
       };
     }
 
-    console.log("Updating world with generated data...");
-    await ctx.runMutation(api.worldSetup.updateWorldGeneration, {
+    // Update world using helper function
+    await updateAdvancedWorldGenerationHandler(ctx, {
       worldId: args.worldId,
       worldData: {
         name: worldData.worldName,
+        environment: worldData.environment,
         regions: worldData.regions,
         factions: worldData.factions,
-        beliefSystems: worldData.beliefSystems,
+        globalSystems: worldData.global_systems,
+        technologyTree: TECHNOLOGY_TREES[setupAnswers.worldType] || TECHNOLOGY_TREES.organic,
       },
     });
 
-    console.log("World generation completed successfully");
     return worldData;
   },
 });
 
-export const generateTurnEvent = action({
+export const generateAdvancedTurnEvent = action({
   args: {
     worldId: v.id("worlds"),
     playerAction: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<any> => {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY environment variable is not set. Please add it to your Convex dashboard.");
-    }
-
     const world = await ctx.runQuery(api.gameEngine.getWorldForEvent, {
       worldId: args.worldId,
     });
@@ -283,253 +884,149 @@ export const generateTurnEvent = action({
 
     const recentEvents = await ctx.runQuery(api.gameEngine.getRecentEvents, {
       worldId: args.worldId,
-      limit: 3,
+      limit: 5,
     });
 
-    // Get stage context for events too
-    const getEventStageContext = (worldType: string, year: number) => {
-      const baseContext: Record<string, {
-        early: string;
-        activities: string;
-        discoveries: string;
-        conflicts: string;
-      }> = {
-        'organic': {
-          early: 'discovering fire, making first tools, finding shelter',
-          activities: 'hunting, gathering, cave painting, seasonal migrations',
-          discoveries: 'fire making, tool crafting, animal tracking, weather patterns',
-          conflicts: 'predator attacks, food scarcity, territory disputes, harsh weather'
+    const prompt = AdvancedPromptEngine.generateEventPrompt(world, recentEvents, args.playerAction);
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.CONVEX_OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.8,
+        max_tokens: 3000,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("Invalid response from OpenAI API");
+    }
+
+    let eventData;
+    try {
+      let content = data.choices[0].message.content;
+      
+      // Extract JSON from markdown code blocks if present
+      const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+      if (jsonMatch) {
+        content = jsonMatch[1];
+      }
+      
+      // Try to find JSON object in the content
+      const jsonStart = content.indexOf('{');
+      const jsonEnd = content.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        content = content.substring(jsonStart, jsonEnd + 1);
+      }
+      
+      eventData = JSON.parse(content);
+      
+    } catch (parseError) {
+      console.error("Raw AI response:", data.choices[0].message.content);
+      console.log("Using advanced fallback event generation");
+      
+      // Enhanced fallback event
+      eventData = {
+        event_analysis: {
+          primary_drivers: ["economic_pressure", "political_tension"],
+          affected_systems: ["economy", "diplomacy", "culture"],
+          urgency_level: 6,
+          complexity_rating: 7
         },
-        'sci-fi': {
-          early: 'repairing basic equipment, establishing communications, surviving on alien world',
-          activities: 'salvaging technology, growing food, maintaining life support, exploring terrain',
-          discoveries: 'new technologies, alien life forms, resource deposits, communication signals',
-          conflicts: 'equipment failures, resource depletion, hostile environment, isolation'
+        narrative: {
+          opening: `The realm stirs with new tensions as ${world.setupAnswers?.supremeBeing?.name} observes from the divine plane. Economic pressures mount across the territories as trade routes face new challenges and factional disputes simmer beneath the surface.`,
+          current_situation: `Recent diplomatic tensions between major factions have begun to affect trade and cultural exchange. What started as minor disagreements over resource allocation has grown into a more significant political crisis.`,
+          stakes: `The stability of the entire realm hangs in the balance. How this crisis resolves will shape the future of civilization for generations to come.`,
+          divine_perspective: `From your divine vantage point, you can see the delicate threads of fate pulling in different directions. A single intervention could tip the scales dramatically.`
         },
-        'fantasy': {
-          early: 'learning magic exists, coping with magical phenomena, first spells',
-          activities: 'farming with magic, healing with herbs, reading omens, ritual ceremonies',
-          discoveries: 'magical abilities, ancient artifacts, mystical creatures, prophecies',
-          conflicts: 'magical accidents, fear of the unknown, power struggles, supernatural threats'
-        },
-        'medieval': {
-          early: 'forming first alliances, establishing trade, building defenses',
-          activities: 'farming, crafting weapons, building homes, training warriors',
-          discoveries: 'better farming methods, trade routes, metalworking, fortification techniques',
-          conflicts: 'bandits, crop diseases, trade disputes, succession questions'
+        choices: [
+          {
+            id: "choice1",
+            text: "🔥 Divine Intervention: Send prophetic visions to faction leaders (may unite them in common purpose, or cause religious schism)",
+            icon: "🔥",
+            divine_cost: 6,
+            immediate_effects: ["faction_unity_boost", "religious_fervor"],
+            long_term_consequences: ["potential_theocracy", "divine_dependency"],
+            affected_factions: Object.keys(world.factions || {})
+          },
+          {
+            id: "choice2",
+            text: "🌊 Economic Blessing: Cause abundant harvests and resource discoveries (brings prosperity, but may create complacency)",
+            icon: "🌊",
+            divine_cost: 4,
+            immediate_effects: ["economic_boom", "population_growth"],
+            long_term_consequences: ["resource_competition", "class_stratification"],
+            affected_factions: Object.keys(world.factions || {})
+          },
+          {
+            id: "choice3",
+            text: "⚡ Natural Challenge: Send environmental tests to forge unity (may strengthen resolve, or cause societal collapse)",
+            icon: "⚡",
+            divine_cost: 8,
+            immediate_effects: ["forced_cooperation", "technological_innovation"],
+            long_term_consequences: ["stronger_civilization", "potential_exodus"],
+            affected_factions: Object.keys(world.factions || {})
+          },
+          {
+            id: "choice4",
+            text: "👁️ Observe Silently: Let mortals solve their own problems without divine interference",
+            icon: "👁️",
+            divine_cost: 0,
+            immediate_effects: ["natural_resolution"],
+            long_term_consequences: ["independence", "potential_chaos"],
+            affected_factions: []
+          }
+        ],
+        world_state_changes: {
+          environmental_shifts: {
+            climate_effects: { temperature: 0, rainfall: 0 },
+            resource_changes: {},
+            ecological_impact: 0
+          },
+          faction_developments: [],
+          regional_changes: [],
+          global_events: [{
+            event_type: "political",
+            description: "Rising tensions between factions challenge the stability of the realm",
+            timeline: "immediate"
+          }],
+          emerging_trends: [{
+            trend_name: "Political Centralization",
+            description: "Factions are being forced to choose between independence and cooperation",
+            potential_outcomes: ["federation_formation", "civil_war"],
+            time_to_impact: 5
+          }]
         }
       };
-      
-      return baseContext[worldType] || baseContext['organic'];
-    };
-
-    const eventContext = getEventStageContext(world.setupAnswers.worldType, world.currentState.year);
-
-    const contextPrompt = `You are narrating the early days of civilization in ${world.name}, a ${world.setupAnswers.worldType} world. This is Year ${world.currentState.year} - still VERY early in development!
-
-REMEMBER: These are primitive people ${eventContext.early}. No complex politics, grand councils, or advanced technology yet!
-
-CURRENT SITUATION:
-- It's Year ${world.currentState.year} during ${world.currentState.season}
-- Weather: ${world.currentState.weather}
-- The balance of power: ${world.currentState.balanceOfPower}
-- Recent major events: ${world.currentState.majorEvents.join(", ")}
-
-THE SMALL GROUPS IN YOUR WORLD:
-${world.factions.map((f: any) => `- The ${f.name}: ${f.beliefs} (${f.population} people, ${f.strength > 60 ? 'doing well' : f.strength > 40 ? 'struggling' : 'barely surviving'})`).join("\n")}
-
-REGIONS IN YOUR WORLD:
-${world.regions.map((r: any) => `- ${r.name}: ${r.geography}`).join("\n")}
-
-WHAT HAPPENED RECENTLY:
-${recentEvents.map((e: any) => `Turn ${e.turnNumber}: ${e.narrative}`).join("\n")}
-
-${args.playerAction ? `YOUR LAST DIVINE ACTION: ${args.playerAction}` : "You have been watching silently from the heavens..."}
-
-Now write what happens next! Focus on:
-- Basic survival: ${eventContext.activities}
-- Simple discoveries: ${eventContext.discoveries}  
-- Primitive conflicts: ${eventContext.conflicts}
-- How your small groups are trying to survive and grow
-
-Write like you're telling a story about people just beginning civilization. Use simple, vivid language about daily survival, not complex politics.
-
-CRITICAL: You are writing choices for GOD, not for humans! The player is the divine being watching from heaven.
-- WRONG: "Gather fish from the river" (that's human work)
-- RIGHT: "Command the fish to multiply in the river" (that's divine intervention)
-- WRONG: "Build fortifications" (humans build)  
-- RIGHT: "Send visions of defensive strategies" (gods send visions)
-- WRONG: "Explore the forest" (humans explore)
-- RIGHT: "Part the forest canopy to reveal hidden paths" (gods manipulate nature)
-
-IMPORTANT: Return ONLY valid JSON, no markdown. Use this exact format:
-{
-  "narrative": "Write 2-3 paragraphs about simple people doing basic survival activities. Show what they're discovering, struggling with, or trying to achieve. Focus on daily life, not grand politics. Use names that fit the civilization stage - simple, descriptive names, not elaborate titles.",
-  "choices": [
-    {
-      "id": "choice1",
-      "text": "🔥 DIVINE ACTION: [GOD INTERVENES] in [REGION] (may [POSITIVE] or [NEGATIVE])",
-      "icon": "🔥"
-    },
-    {
-      "id": "choice2", 
-      "text": "🌊 DIVINE WILL: [GOD CAUSES/COMMANDS] for [FACTION] (could [BENEFIT] but risks [DANGER])",
-      "icon": "🌊"
-    },
-    {
-      "id": "choice3",
-      "text": "⚡ GODLY POWER: [GOD MANIFESTS] affecting [SITUATION] (might [HELP] or [BACKFIRE])",
-      "icon": "⚡"
-    },
-    {
-      "id": "choice4",
-      "text": "👁️ Remain Silent and observe how your people adapt to their current challenges",
-      "icon": "👁️"
     }
-  ],
-  "worldStateChanges": {
-    "factionChanges": [
-      {
-        "factionName": "Name of affected group",
-        "changes": "Simple description of how their survival situation changed"
-      }
-    ],
-    "environmentChanges": "Basic changes to the world that affect survival",
-    "newEvents": ["Simple events that primitive people would understand"]
-  }
-}
 
-CRITICAL CHOICE FORMATTING RULES:
-- Write from GOD'S PERSPECTIVE: "Command the fish to swarm" NOT "Gather fish"
-- Use DIVINE ACTIONS: "Send lightning", "Cause earthquake", "Bless with visions", "Curse with plague"
-- Divine Action Examples:
-  * "Multiply the [resource] in [region]" 
-  * "Send [weather/disaster] to [location]"
-  * "Grant divine [knowledge/ability] to [faction]"
-  * "Cause the [terrain] to [change]"
-  * "Summon [creatures/phenomena] near [faction]"
-  * "Bless [faction] with [benefit]" 
-  * "Test [faction] with [challenge]"
-- Use actual region names from the world (${world.regions.map((r: any) => r.name).join(', ')})
-- Use actual faction names (${world.factions.map((f: any) => f.name).join(', ')})
-- Show both positive and negative consequences in parentheses
-- Make actions dramatic but appropriate for early civilization
-- Examples: "${eventContext.discoveries}" or "${eventContext.conflicts}"
+    // Save the advanced event using helper function
+    const newTurn = world.currentTurn + 1;
+    await saveAdvancedGameEventHandler(ctx, {
+      worldId: args.worldId,
+      turnNumber: newTurn,
+      eventData,
+      playerAction: args.playerAction,
+    });
 
-Make each choice appropriate for early civilization. No complex politics! RESPOND WITH ONLY THE JSON OBJECT.`;
-
-    try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: contextPrompt }],
-          temperature: 0.9,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error("Invalid response from OpenAI API");
-      }
-
-      let eventData;
-      try {
-        let content = data.choices[0].message.content;
-        
-        // Extract JSON from markdown code blocks if present
-        const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-        if (jsonMatch) {
-          content = jsonMatch[1];
-        }
-        
-        // Clean up control characters that might cause parsing issues
-        content = content.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
-        
-        // Try to find JSON object in the content
-        const jsonStart = content.indexOf('{');
-        const jsonEnd = content.lastIndexOf('}');
-        
-        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-          content = content.substring(jsonStart, jsonEnd + 1);
-        }
-        
-        eventData = JSON.parse(content);
-        
-      } catch (parseError) {
-        console.error("Raw AI response:", data.choices[0].message.content);
-        const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
-        
-        // Fallback event data
-        console.log("Using fallback event generation due to parsing error");
-        eventData = {
-          narrative: `The heavens stir with divine energy as ${world.setupAnswers.supremeBeing.name} contemplates the realm below. 
-
-Your people go about their daily lives, unaware that their creator watches from above. In the ${world.regions[0]?.name || "central lands"}, merchants travel the dusty roads while farmers tend their fields. Children play in village squares as their elders speak in hushed tones about strange omens in the sky.
-
-${world.factions[0]?.name || "Your followers"} have been especially devout lately, offering prayers and sacrifices at dawn. Meanwhile, tensions simmer between different groups as resources grow scarce and old rivalries resurface. The world awaits your divine guidance.`,
-          choices: [
-            {
-              id: "choice1",
-              text: `🔥 Send Divine Lightning to ${world.regions[0]?.name || "the lands"} (may ignite sacred fires for warmth, or burn their shelters to ash)`,
-              icon: "🔥"
-            },
-            {
-              id: "choice2", 
-              text: `🌊 Command the Waters to Rise for ${world.factions[0]?.name || "your people"} (could provide life-giving water, or flood their camps)`,
-              icon: "🌊"
-            },
-            {
-              id: "choice3",
-              text: `⚡ Bestow Divine Visions upon their Leaders (might grant crucial knowledge, or drive them mad with cosmic truth)`,
-              icon: "⚡"
-            },
-            {
-              id: "choice4",
-              text: "👁️ Remain Silent and observe how your people adapt to their current challenges",
-              icon: "👁️"
-            }
-          ],
-          worldStateChanges: {
-            factionChanges: [
-              {
-                factionName: world.factions[0]?.name || "The Faithful",
-                changes: "Growing more devout and seeking divine guidance"
-              }
-            ],
-            environmentChanges: "The seasons change as usual, but there's tension in the air",
-            newEvents: ["Divine presence felt by mortals", "Increasing religious devotion"]
-          }
-        };
-      }
-
-      // Save the event
-      const newTurn = world.currentTurn + 1;
-      await ctx.runMutation(api.gameEngine.saveGameEvent, {
-        worldId: args.worldId,
-        turnNumber: newTurn,
-        eventData,
-        playerAction: args.playerAction,
-      });
-
-      return eventData;
-    } catch (error) {
-      console.error("Error generating turn event:", error instanceof Error ? error.message : String(error));
-      throw error;
-    }
+    return eventData;
   },
 });
 
+// Keep the existing functions but add advanced versions
 export const getWorldForEvent = query({
   args: { worldId: v.id("worlds") },
   handler: async (ctx, args) => {
@@ -557,70 +1054,107 @@ export const getRecentEvents = query({
   },
 });
 
-export const saveGameEvent = mutation({
+export const updateAdvancedWorldGeneration = mutation({
+  args: {
+    worldId: v.id("worlds"),
+    worldData: v.object({
+      name: v.string(),
+      environment: v.any(),
+      regions: v.any(),
+      factions: v.any(),
+      globalSystems: v.any(),
+      technologyTree: v.any(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.worldId, {
+      name: args.worldData.name,
+      regions: args.worldData.regions,
+      factions: args.worldData.factions,
+      environment: args.worldData.environment,
+      globalSystems: args.worldData.globalSystems,
+      technologyTree: args.worldData.technologyTree,
+      isSetupComplete: true,
+    });
+  },
+});
+
+export const saveAdvancedGameEvent = mutation({
   args: {
     worldId: v.id("worlds"),
     turnNumber: v.number(),
-    eventData: v.object({
-      narrative: v.string(),
-      choices: v.array(v.object({
-        id: v.string(),
-        text: v.string(),
-        icon: v.string(),
-      })),
-      worldStateChanges: v.object({
-        factionChanges: v.optional(v.array(v.object({
-          factionName: v.string(),
-          changes: v.string(),
-        }))),
-        environmentChanges: v.optional(v.string()),
-        newEvents: v.optional(v.array(v.string())),
-      }),
-    }),
+    eventData: v.any(),
     playerAction: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Save the event
+    // Save the advanced event
     await ctx.db.insert("gameEvents", {
       worldId: args.worldId,
       turnNumber: args.turnNumber,
-      eventType: "divine_action",
-      narrative: args.eventData.narrative,
+      eventType: "advanced_simulation",
+      narrative: args.eventData.narrative || args.eventData.narrative?.opening || "Advanced event occurred",
       playerAction: args.playerAction,
       choices: args.eventData.choices,
-      worldStateChanges: args.eventData.worldStateChanges,
+      worldStateChanges: args.eventData.world_state_changes || {},
+      eventAnalysis: args.eventData.event_analysis,
     });
 
-    // Update world state
+    // Update world state with sophisticated changes
     const world = await ctx.db.get(args.worldId);
     if (!world) return;
 
-    const updatedFactions = world.factions.map(faction => {
-      const change = args.eventData.worldStateChanges.factionChanges?.find(
-        c => c.factionName === faction.name
+    // Apply advanced faction changes
+    const updatedFactions = world.factions?.map((faction: any) => {
+      const factionChanges = args.eventData.world_state_changes?.faction_developments?.find(
+        (change: any) => change.faction_id === faction.id
       );
-      if (change) {
-        // Simple strength adjustment based on change description
-        const strengthDelta = change.changes.includes("weakened") ? -10 :
-                            change.changes.includes("strengthened") ? 10 : 0;
+      
+      if (factionChanges) {
         return {
           ...faction,
-          strength: Math.max(0, Math.min(100, faction.strength + strengthDelta)),
+          population: Math.max(0, (faction.population || faction.population?.total || 0) + (factionChanges.population_change || 0)),
+          strength: Math.max(0, Math.min(100, faction.strength + (factionChanges.military_change || 0))),
+          economy: {
+            ...faction.economy,
+            wealth: Math.max(0, Math.min(100, (faction.economy?.wealth || 50) + (factionChanges.wealth_change || 0)))
+          },
+          stability: {
+            ...faction.stability,
+            internal_happiness: Math.max(0, Math.min(100, (faction.stability?.internal_happiness || 50) + (factionChanges.stability_change || 0)))
+          }
         };
       }
       return faction;
-    });
+    }) || world.factions;
 
-    const newMajorEvents = args.eventData.worldStateChanges.newEvents || [];
-    const updatedMajorEvents = [...world.currentState.majorEvents, ...newMajorEvents].slice(-5);
+    // Apply environmental changes
+    const environmentChanges = args.eventData.world_state_changes?.environmental_shifts;
+    const updatedEnvironment = world.environment ? {
+      ...world.environment,
+      climate: {
+        ...world.environment.climate,
+        baseTemperature: (world.environment.climate?.baseTemperature || 15) + (environmentChanges?.climate_effects?.temperature || 0),
+        rainfall: Math.max(0, Math.min(100, (world.environment.climate?.rainfall || 60) + (environmentChanges?.climate_effects?.rainfall || 0)))
+      }
+    } : world.environment;
+
+    // Update emerging trends
+    const emergingTrends = args.eventData.world_state_changes?.emerging_trends || [];
+    
+    const newMajorEvents = [
+      ...(world.currentState?.majorEvents || []),
+      ...emergingTrends.map((trend: any) => trend.trend_name)
+    ].slice(-5);
 
     await ctx.db.patch(args.worldId, {
       currentTurn: args.turnNumber,
       factions: updatedFactions,
+      environment: updatedEnvironment,
       currentState: {
         ...world.currentState,
-        year: world.currentState.year + (args.turnNumber % 4 === 0 ? 1 : 0),
-        majorEvents: updatedMajorEvents,
+        year: (world.currentState?.year || 1) + (args.turnNumber % 4 === 0 ? 1 : 0),
+        majorEvents: newMajorEvents,
+        emergingTrends: emergingTrends,
       },
     });
   },
@@ -694,107 +1228,84 @@ export const makePlayerDecision = mutation({
   },
 });
 
-// Debug functions
-export const debugWorldState = query({
-  args: { worldId: v.id("worlds") },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) return null;
-
-    const world = await ctx.db.get(args.worldId);
-    if (!world || world.userId !== userId) return null;
-
-    return {
-      worldExists: !!world,
-      isSetupComplete: world.isSetupComplete,
-      hasRegions: world.regions?.length > 0,
-      hasFactions: world.factions?.length > 0,
-      currentTurn: world.currentTurn,
-      worldName: world.name,
-      setupAnswers: world.setupAnswers,
-    };
+// Keep original functions for backward compatibility
+export const generateWorld = action({
+  args: {
+    worldId: v.id("worlds"),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    // Redirect to the new advanced function
+    return await ctx.runAction(api.gameEngine_new.generateAdvancedWorld, args);
   },
 });
 
-export const checkEnvironmentVariables = action({
-  args: {},
-  handler: async (ctx, args) => {
-    return {
-      hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-      hasConvexOpenAIKey: !!process.env.CONVEX_OPENAI_API_KEY,
-      nodeEnv: process.env.NODE_ENV,
-    };
+export const generateTurnEvent = action({
+  args: {
+    worldId: v.id("worlds"),
+    playerAction: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    // Redirect to the new advanced function
+    return await ctx.runAction(api.gameEngine_new.generateAdvancedTurnEvent, args);
   },
 });
 
-export const testOpenAIConnection = action({
-  args: {},
-  handler: async (ctx, args) => {
-    if (!process.env.OPENAI_API_KEY) {
-      return { error: "OPENAI_API_KEY not found" };
-    }
-
-    try {
-      const response = await fetch("https://api.openai.com/v1/models", {
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+export const saveGameEvent = mutation({
+  args: {
+    worldId: v.id("worlds"),
+    turnNumber: v.number(),
+    eventData: v.object({
+      narrative: v.string(),
+      choices: v.array(v.object({
+        id: v.string(),
+        text: v.string(),
+        icon: v.string(),
+      })),
+      worldStateChanges: v.object({
+        factionChanges: v.optional(v.array(v.object({
+          factionName: v.string(),
+          changes: v.string(),
+        }))),
+        environmentChanges: v.optional(v.string()),
+        newEvents: v.optional(v.array(v.string())),
+      }),
+    }),
+    playerAction: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    // Convert to advanced format and use the new handler
+    const advancedEventData = {
+      narrative: {
+        opening: args.eventData.narrative,
+        current_situation: "",
+        stakes: "",
+        divine_perspective: ""
+      },
+      choices: args.eventData.choices,
+      world_state_changes: {
+        faction_developments: args.eventData.worldStateChanges.factionChanges?.map(change => ({
+          faction_id: change.factionName,
+          population_change: 0,
+          wealth_change: 0,
+          stability_change: 0,
+          military_change: 0
+        })) || [],
+        environmental_shifts: {
+          climate_effects: {},
+          resource_changes: {},
+          ecological_impact: 0
         },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        return { error: `OpenAI API error: ${response.status} - ${errorText}` };
+        regional_changes: [],
+        global_events: [],
+        emerging_trends: []
       }
+    };
 
-      return { success: "OpenAI API connection successful" };
-    } catch (error) {
-      return { error: `Network error: ${error instanceof Error ? error.message : String(error)}` };
-    }
-  },
-});
-
-export const forceCompleteWorldSetup = mutation({
-  args: { worldId: v.id("worlds") },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error("Must be authenticated");
-    }
-
-    const world = await ctx.db.get(args.worldId);
-    if (!world || world.userId !== userId) {
-      throw new Error("World not found or access denied");
-    }
-
-    // Force complete with minimal data if it's stuck
-    await ctx.db.patch(args.worldId, {
-      name: world.name || `Realm of ${world.setupAnswers.supremeBeing.name}`,
-      regions: world.regions.length > 0 ? world.regions : [
-        {
-          name: "The Starting Lands",
-          geography: "A simple realm where life begins",
-          resources: ["water", "food", "shelter materials"]
-        }
-      ],
-      factions: world.factions.length > 0 ? world.factions : [
-        {
-          name: "The First People",
-          type: "tribal group",
-          alignment: "neutral",
-          beliefs: `Simple folk who worship ${world.setupAnswers.supremeBeing.name}`,
-          leadership: "tribal elder",
-          strength: 50,
-          population: 100
-        }
-      ],
-      beliefSystems: world.beliefSystems.length > 0 ? world.beliefSystems : [
-        `${world.setupAnswers.supremeBeing.name} created this world`,
-        "Life is sacred and must be protected",
-        "The divine watches over all"
-      ],
-      isSetupComplete: true,
+    return await saveAdvancedGameEventHandler(ctx, {
+      worldId: args.worldId,
+      turnNumber: args.turnNumber,
+      eventData: advancedEventData,
+      playerAction: args.playerAction,
     });
-
-    return true;
   },
 });

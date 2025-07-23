@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Authenticated, Unauthenticated, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { SignInForm } from "./SignInForm";
@@ -115,19 +115,42 @@ function AuthenticatedContent({
   const world = useQuery(api.worldSetup.getUserWorld);
   const loggedInUser = useQuery(api.auth.loggedInUser);
 
-  if (world === undefined) {
+  // Debug logging
+  console.log("AuthenticatedContent state:", { world, loggedInUser });
+
+  // Wait for both queries to load
+  if (world === undefined || loggedInUser === undefined) {
+    const [showRefresh, setShowRefresh] = useState(false);
+    
+    // Show refresh option after 5 seconds
+    useEffect(() => {
+      const timer = setTimeout(() => setShowRefresh(true), 5000);
+      return () => clearTimeout(timer);
+    }, []);
+
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-5rem)]">
         <div className="brutal-container text-center">
           <div className="brutal-loading mx-auto mb-6"></div>
           <div className="brutal-text">LOADING DIVINE PROTOCOLS...</div>
           <div className="brutal-text text-accent mt-2">[PLEASE WAIT]</div>
+          <div className="brutal-text text-xs mt-4 text-secondary">
+            {world === undefined ? "LOADING_WORLD..." : "WORLD_READY"} | {loggedInUser === undefined ? "LOADING_USER..." : "USER_READY"}
+          </div>
+          {showRefresh && (
+            <button 
+              className="brutal-button-secondary mt-6"
+              onClick={() => window.location.reload()}
+            >
+              REFRESH_DIVINE_CONNECTION
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  // No world exists - show setup
+  // No world exists (world is null) - show setup
   if (!world) {
     return (
       <div className="py-12">

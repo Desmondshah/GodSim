@@ -127,7 +127,31 @@ export function GameInterface({ worldId }: GameInterfaceProps) {
               </div>
               <div className="prose max-w-none">
                 <div className="text-lg leading-relaxed text-gray-800 whitespace-pre-line font-serif">
-                  {currentEvent.narrative}
+                  {typeof currentEvent.narrative === 'string' 
+                    ? currentEvent.narrative 
+                    : (
+                      <div className="space-y-4">
+                        {currentEvent.narrative.opening && (
+                          <div>{currentEvent.narrative.opening}</div>
+                        )}
+                        {currentEvent.narrative.current_situation && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <strong>Current Situation:</strong> {currentEvent.narrative.current_situation}
+                          </div>
+                        )}
+                        {currentEvent.narrative.stakes && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <strong>Stakes:</strong> {currentEvent.narrative.stakes}
+                          </div>
+                        )}
+                        {currentEvent.narrative.divine_perspective && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <strong>Divine Perspective:</strong> {currentEvent.narrative.divine_perspective}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
                 </div>
               </div>
             </div>
