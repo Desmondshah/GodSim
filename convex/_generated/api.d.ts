@@ -15,7 +15,6 @@ import type {
 } from "convex/server";
 import type * as advancedGameEngine from "../advancedGameEngine.js";
 import type * as advancedSystemsTest from "../advancedSystemsTest.js";
-import type * as aiComponents from "../aiComponents.js";
 import type * as aiPoweredComponents from "../aiPoweredComponents.js";
 import type * as auth from "../auth.js";
 import type * as gameEngine from "../gameEngine.js";
@@ -38,7 +37,6 @@ import type * as worldSetup from "../worldSetup.js";
 declare const fullApi: ApiFromModules<{
   advancedGameEngine: typeof advancedGameEngine;
   advancedSystemsTest: typeof advancedSystemsTest;
-  aiComponents: typeof aiComponents;
   aiPoweredComponents: typeof aiPoweredComponents;
   auth: typeof auth;
   gameEngine: typeof gameEngine;
